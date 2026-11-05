@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Redigering – Arbeidshåndbok</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#1f5f8b">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body class="editor">
+  <header class="topbar">
+    <a class="brand" href="editor.html" aria-label="Til redigeringsoversikten">
+      <span class="logo" aria-hidden="true">✏️</span>
+      <span>Redigering</span>
+    </a>
+    <a class="toplink" href="index.html">Se håndboken →</a>
+  </header>
+
+  <main id="ed" tabindex="-1"><p class="empty">Laster …</p></main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="md.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>

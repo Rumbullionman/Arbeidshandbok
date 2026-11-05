@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Arbeidshåndbok</title>
+  <meta name="description" content="Oppslagsverk for nyansatte – fungerer også uten nett.">
+  <meta name="theme-color" content="#1f5f8b">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/" aria-label="Til forsiden">
+      <span class="logo" aria-hidden="true">📘</span>
+      <span>Arbeidshåndbok</span>
+    </a>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <footer class="footer">
+    <span id="meta"></span>
+    <button id="installBtn" class="link" hidden>Installer som app</button>
+    <button id="refreshBtn" class="link">Sjekk etter oppdateringer</button>
+  </footer>
+
+  <script src="md.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
