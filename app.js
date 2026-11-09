@@ -49,7 +49,7 @@
   }
 
   /* ---------- hjelpere ---------- */
-  const { esc, markdown } = window.HBMD;
+  const { esc, markdown, imageNames } = window.HBMD;
 
   function fmtDate(iso) {
     const d = new Date(iso);
@@ -228,6 +228,24 @@
     return json;
   }
 
+  // Laster ned bilder i bakgrunnen så de også vises uten nett. Bilder har unike navn, så de hentes bare én gang.
+  async function precacheImages(d) {
+    if (!navigator.onLine || !('caches' in window)) return;
+    const names = new Set();
+    d.articles.forEach((a) => imageNames(a.body).forEach((n) => names.add(n)));
+    if (!names.size) return;
+    let cache;
+    try { cache = await caches.open('handbok-content'); } catch (e) { return; }
+    for (const n of names) {
+      const url = 'content/' + n;
+      try {
+        if (await cache.match(url)) continue;
+        const res = await fetch(url);
+        if (res.ok) await cache.put(url, res);
+      } catch (e) { /* prøves igjen neste gang */ }
+    }
+  }
+
   async function checkForUpdates(manual) {
     if (!navigator.onLine) {
       setStatus('offline');
@@ -247,6 +265,7 @@
       store.set(KEYS.data, fresh);
       initSeen(fresh.articles);
       renderMeta();
+      precacheImages(fresh);
 
       if (old && (changed.length || removed)) {
         const added = changed.filter((a) => !oldMap.has(a.id)).length;
@@ -286,6 +305,7 @@
       initSeen(data.articles);
       renderMeta();
       route();
+      precacheImages(data);
     } catch (err) {
       app.innerHTML = `<p class="empty">Håndboken kunne ikke lastes. Koble til nett første gang du åpner den, så blir innholdet lagret for offline bruk.</p>
         <p class="empty"><button class="btn primary" id="retry">Prøv igjen</button></p>`;

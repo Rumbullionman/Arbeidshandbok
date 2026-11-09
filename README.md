@@ -55,6 +55,57 @@ Editoren ordner selv `id`, «Oppdatert»-datoen, versjonsnummeret og at alle kat
 | `[tekst](#/artikkel/id)` | Lenke til annen artikkel |
 | `[tekst](https://…)` | Ekstern lenke |
 
+### Bilder
+
+- I editoren: trykk **🖼 Bilde** i verktøylinjen, eller lim inn / dra et bilde inn i tekstfeltet. På mobil velger du fra galleriet eller tar et nytt bilde.
+- Du blir bedt om en kort beskrivelse. Den vises under bildet og leses opp av skjermlesere.
+- Bildene gjøres automatisk mindre (maks 1600 piksler, komprimert), så et mobilbilde på flere MB blir ofte under 300 kB. Skjermbilder (PNG) beholdes skarpe når de er små nok.
+- Forhåndsvisningen viser bildet med en gang. Bildet publiseres sammen med artikkelen.
+- **Med GitHub:** «Publiser» laster først opp bildene, deretter artikkelen. Bildene havner i `content/bilder/`.
+- **Uten GitHub:** «Last ned oppdatering (.zip)» gir én zip med `articles.json` og bildene. Pakk den ut i håndbok-mappen på webserveren (så filene havner i `content/`) og la den overskrive eksisterende filer.
+- Alle som bruker håndboken, får bildene lastet ned i bakgrunnen når de er på nett, slik at de også vises uten nett.
+- Vil du fjerne et bilde fra en artikkel, sletter du linjen som starter med `![`. Selve bildefilen blir liggende i `content/bilder/` (du kan slette den på GitHub hvis du vil rydde).
+- Formatet i teksten er `![Beskrivelse](bilder/navn.jpg)` på en egen linje.
+
+### «Se også»
+
+Under hver artikkel kan du velge relaterte artikler. Med mange artikler bruker du søkefeltet over listen: du kan søke på tittel, kategori og søkeord. «Bare valgte» viser det du allerede har krysset av. Valg du har gjort, beholdes selv om de er skjult av søket.
+
+## Godkjenning: alle kan skrive, hovedadmin godkjenner
+
+Slik er det satt opp:
+
+| Rolle | Kan | Nøkkel |
+|---|---|---|
+| **Hovedadmin** (du) | Publisere direkte, og se gjennom og godkjenne forslag fra andre | Nøkkel med skrivetilgang til håndbok-repoet (og innboksen) |
+| **Redaktør** (alle andre) | Skrive, endre og slette artikler i eget utkast og **sende dem til godkjenning** | Nøkkel som bare har tilgang til innboks-repoet |
+| Uten tilkobling | Skrive utkast og laste ned filen | Ingen |
+
+Godkjenningen håndheves av GitHub, ikke bare av knappene i editoren: en redaktørnøkkel har ikke skrivetilgang til håndbok-repoet, så ingen kan publisere uten din nøkkel. Forslag ligger i et eget **privat** repo (innboksen) til du har godkjent dem.
+
+**Engangsoppsett (hovedadmin)**
+1. Sett opp publisering til GitHub Pages som beskrevet under (håndbok-repoet).
+2. Lag et nytt **privat** repo for innboksen, for eksempel `handbok-innsendinger`. Huk av for «Add a README file».
+3. Lag en nøkkel til deg selv med tilgang til **begge** repoene (Contents: Read and write). Koble til i editoren under **⚙ Tilkobling**: først «Hovedadmin», deretter «Innboks».
+4. Lag en **egen** nøkkel til redaktørene med tilgang til **bare** innboks-repoet (Contents: Read and write). Vil du ha e-postvarsel når noen sender inn noe, gir du den også Issues: Read and write, slår på Issues i innboks-repoets innstillinger og følger repoet.
+5. Under **⚙ Tilkobling → Inviter redaktører** limer du inn redaktørnøkkelen og får en invitasjonslenke. Editoren nekter å lage lenken hvis du limer inn din egen hovedadmin-nøkkel eller en nøkkel som kan skrive til håndboken.
+6. Send lenken privat til redaktørene. Når de åpner den, kobles de til som redaktører med ett klikk. De trenger ikke GitHub-konto.
+
+**Slik jobber redaktørene:** de skriver og endrer artikler som vanlig. Når de er ferdige, trykker de **«Send til godkjenning»**. De kan ikke lage nye kategorier. Under «Mine innsendinger» ser de om forslaget venter, er godkjent eller er avvist, og hva du skrev som begrunnelse.
+
+**Slik godkjenner du:**
+1. Åpne editoren. Knappen **«📥 Innboks»** viser hvor mange forslag som venter.
+2. Trykk «Se gjennom». Du ser forslaget slik det blir i håndboken, og for endringer en fane «Endringer» som markerer hva som er lagt til og fjernet. Advarsler vises hvis artikkelen er endret siden forslaget ble laget, hvis en ny kategori opprettes, eller hvis noe er galt med bildene.
+3. **Godkjenn** legger forslaget i utkastet ditt (nye bilder følger med). **Avvis** sender det tilbake med en begrunnelse.
+4. Når du er fornøyd, trykker du **«Publiser til GitHub»** i oversikten. Først da kommer endringene ut. Forslagene markeres samtidig som godkjent, og varsel-issuene lukkes.
+
+**Sikkerhet**
+- Alt i innboksen behandles som upålitelig. Editoren kontrollerer id-er, feltlengder og bilder (må være ekte JPEG, PNG eller GIF, ikke SVG), og teksten vises aldri som kjørbar kode. Du ser alltid forslaget før noe godkjennes.
+- Redaktørnøkkelen kan lese og endre alt i innboksen, men ingenting i håndbok-repoet. Verste utfall hvis den kommer på avveie, er at noen sender inn søppelforslag eller leser uferdige utkast. Trekk den da tilbake på GitHub og lag en ny.
+- «Navn» på forslag skrives inn av redaktøren selv og er ikke verifisert. Vil du ha verifiserte navn, kan hver redaktør få sin egen nøkkel (egen GitHub-bruker med tilgang til innboks-repoet).
+- Du som hovedadmin kan fortsatt redigere og publisere direkte uten godkjenning.
+- Ligger håndboken i et offentlig repo, er publisert innhold offentlig. Innboksen er privat, så forslag er ikke synlige før du publiserer dem.
+
 ## Publisering med ett klikk via GitHub Pages
 
 > **Viktig om personvern:** GitHub Pages på gratis konto krever et **offentlig** repo. Alle som kjenner adressen kan da lese håndboken, og innholdet i repoet er offentlig. Legg ikke inn interne eller fortrolige opplysninger (telefonnumre, interne rutiner, kundeinformasjon) uten å ha tenkt gjennom dette. Trenger dere lukket tilgang, kan dere bruke Netlify eller Cloudflare Pages med innlogging, en intern server, eller GitHub med betalt plan som støtter private sider.
@@ -102,7 +153,7 @@ python3 -m http.server 8080
 
 ## Når du endrer selve appen
 
-Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `editor.js`, `md.js` eller ikoner, må du øke `VERSION` i `sw.js` (fra `v3` til `v4`, og så videre). Da henter alle enheter ny app neste gang de er på nett. Rene innholdsendringer krever ikke dette.
+Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `editor.js`, `godkjenning.js`, `md.js` eller ikoner, må du øke `VERSION` i `sw.js` (fra `v5` til `v6`, og så videre). Da henter alle enheter ny app neste gang de er på nett. Rene innholdsendringer krever ikke dette.
 
 ## Filer
 
@@ -110,6 +161,8 @@ Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `edi
 |---|---|
 | `index.html`, `style.css`, `app.js`, `md.js` | Selve håndboken |
 | `editor.html`, `editor.js`, `editor.css` | Redigeringsverktøyet |
+| `godkjenning.js` | Roller, innsending og godkjenning |
 | `sw.js` | Offline og hurtigbuffer |
 | `manifest.webmanifest`, `icons/` | Installering og ikon |
 | `content/articles.json` | Alle artiklene |
+| `content/bilder/` | Bilder brukt i artiklene (opprettes når du legger inn det første bildet) |
