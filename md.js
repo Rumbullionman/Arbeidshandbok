@@ -20,7 +20,22 @@
     return t;
   }
 
-  function markdown(src) {
+  /* ---------- bilder ---------- */
+  // Bilder ligger i content/bilder/ og skrives slik i teksten: ![Beskrivelse](bilder/navn.jpg)
+  const IMG_REL = /^bilder\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
+  function imageUrl(path) {
+    if (IMG_REL.test(path)) return 'content/' + path;
+    if (/^https:\/\/[^\s"'<>]+$/.test(path)) return path;
+    return null;
+  }
+  function imageNames(body) {
+    const out = [];
+    String(body || '').replace(/^!\[[^\]]*\]\((bilder\/[A-Za-z0-9][A-Za-z0-9._-]*)\)\s*$/gm, (m, p) => { out.push(p); return m; });
+    return out;
+  }
+
+  // opts.imageSrc(path) lar editoren vise bilder som ikke er publisert ennå.
+  function markdown(src, opts) {
     const lines = String(src || '').replace(/\r/g, '').split('\n');
     const out = [];
     let i = 0;
@@ -32,6 +47,14 @@
       if ((m = line.match(/^(#{1,3})\s+(.*)$/))) {
         const level = m[1].length + 1; // # i brødtekst blir h2
         out.push(`<h${level}>${inline(m[2])}</h${level}>`);
+        i++; continue;
+      }
+      if ((m = line.match(/^!\[([^\]]*)\]\(([^)\s]+)\)\s*$/))) {
+        const local = opts && opts.imageSrc && IMG_REL.test(m[2]) ? opts.imageSrc(m[2]) : null;
+        const url = local || imageUrl(m[2]);
+        if (url) {
+          out.push(`<figure><img src="${esc(url)}" alt="${esc(m[1])}" loading="lazy">${m[1] ? `<figcaption>${esc(m[1])}</figcaption>` : ''}</figure>`);
+        }
         i++; continue;
       }
       if (/^\|.*\|\s*$/.test(line)) {
@@ -67,11 +90,11 @@
         continue;
       }
       const para = [];
-      while (i < lines.length && lines[i].trim() && !/^(#{1,3}\s|>|\s*[-*]\s|\s*\d+[.)]\s|\|)/.test(lines[i])) { para.push(lines[i]); i++; }
+      while (i < lines.length && lines[i].trim() && !/^(#{1,3}\s|>|\s*[-*]\s|\s*\d+[.)]\s|\||!\[)/.test(lines[i])) { para.push(lines[i]); i++; }
       out.push(`<p>${inline(para.join(' '))}</p>`);
     }
     return out.join('\n');
   }
 
-  g.HBMD = { esc: esc, markdown: markdown };
+  g.HBMD = { esc: esc, markdown: markdown, imageNames: imageNames };
 })(window);

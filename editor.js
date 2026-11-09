@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const { esc, markdown } = window.HBMD;
+  const { esc, markdown, imageNames } = window.HBMD;
   const KEY = 'hbe:draft';
   const root = document.getElementById('ed');
 
@@ -12,6 +12,8 @@
   let baseSrc = 'site';                        // 'gh' hvis publisert versjon er hentet fra GitHub
   let origin = null;                           // publisert versjon som utkastet bygger på
   let busy = false;
+  const hooks = {};                            // utvidelser fra godkjenning.js (roller, innboks, godkjenning)
+  const pending = new Map();                   // bilder som ikke er publisert ennå: navn -> {name, type, blob, url}
 
   /* ---------- hjelpere ---------- */
   const $ = (s, r = document) => r.querySelector(s);
@@ -120,6 +122,176 @@
     return contentSig(b) !== contentSig(a) ? 'Endret' : '';
   }
 
+  /* ---------- bilder ---------- */
+  const MAX_DIM = 1600;
+  const imgName = (p) => p.replace(/^bilder\//, '');
+  const imageSrc = (p) => { const r = pending.get(imgName(p)); return r ? r.url : null; };
+  function refsOf(d) {
+    const s = new Set();
+    d.articles.forEach((a) => imageNames(a.body).forEach((n) => s.add(imgName(n))));
+    return s;
+  }
+  const referencedPending = (d) => { const refs = refsOf(d); return [...pending.values()].filter((r) => refs.has(r.name)); };
+
+  // Bilder som ikke er publisert, lagres i IndexedDB så de overlever at siden lastes på nytt.
+  const idb = {
+    db: null,
+    open() {
+      if (this.db) return Promise.resolve(this.db);
+      return new Promise((res, rej) => {
+        try {
+          const r = indexedDB.open('hbe', 1);
+          r.onupgradeneeded = () => r.result.createObjectStore('img', { keyPath: 'name' });
+          r.onsuccess = () => { this.db = r.result; res(r.result); };
+          r.onerror = () => rej(r.error);
+        } catch (e) { rej(e); }
+      });
+    },
+    async tx(mode, fn) {
+      const db = await this.open();
+      return new Promise((res, rej) => {
+        const t = db.transaction('img', mode);
+        const req = fn(t.objectStore('img'));
+        t.oncomplete = () => res(req && req.result);
+        t.onerror = () => rej(t.error);
+        t.onabort = () => rej(t.error);
+      });
+    },
+    all() { return this.tx('readonly', (s) => s.getAll()); },
+    put(rec) { return this.tx('readwrite', (s) => s.put(rec)); },
+    del(name) { return this.tx('readwrite', (s) => s.delete(name)); }
+  };
+
+  async function loadPending() {
+    try {
+      (await idb.all() || []).forEach((r) => pending.set(r.name, { ...r, url: URL.createObjectURL(r.blob) }));
+    } catch (e) { /* IndexedDB utilgjengelig, for eksempel i privat modus */ }
+  }
+  async function dropPending(names) {
+    for (const n of (names || [...pending.keys()])) {
+      const r = pending.get(n);
+      if (r) { URL.revokeObjectURL(r.url); pending.delete(n); }
+      try { await idb.del(n); } catch (e) { /* ignorer */ }
+    }
+  }
+  // Bilder som allerede står i den publiserte versjonen trenger ikke ligge i kø lenger.
+  async function cleanupPending() {
+    const published = refsOf(base);
+    await dropPending([...pending.keys()].filter((n) => published.has(n)));
+  }
+
+  function loadBitmap(file) {
+    const viaImg = () => new Promise((res, rej) => {
+      const url = URL.createObjectURL(file);
+      const im = new Image();
+      im.onload = () => { URL.revokeObjectURL(url); res(im); };
+      im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Kunne ikke lese bildet. Bruk et vanlig JPEG- eller PNG-bilde.')); };
+      im.src = url;
+    });
+    return window.createImageBitmap ? createImageBitmap(file).catch(viaImg) : viaImg();
+  }
+  const toBlob = (canvas, type, q) => new Promise((res) => canvas.toBlob(res, type, q));
+
+  // Skalerer ned (maks 1600 px) og komprimerer, så bildene blir små og raske å laste på mobil.
+  async function processImage(file) {
+    // SVG tas med vilje ikke imot: filene kan inneholde skript. Alle andre bilder gjøres om til JPEG/PNG.
+    if (file.type === 'image/gif') {
+      if (file.size > 1.5 * 1024 * 1024) throw new Error('Bildet er for stort (over 1,5 MB).');
+      return { blob: file, ext: 'gif' };
+    }
+    if (!/^image\//.test(file.type)) throw new Error('Dette er ikke et bilde.');
+    const bmp = await loadBitmap(file);
+    const scale = Math.min(1, MAX_DIM / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    const draw = (white) => {
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const ctx = cv.getContext('2d');
+      if (white) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); }
+      ctx.drawImage(bmp, 0, 0, w, h);
+      return cv;
+    };
+    if (file.type === 'image/png') {
+      const png = await toBlob(draw(false), 'image/png');
+      if (png && png.size <= 600 * 1024) return { blob: png, ext: 'png' };
+    }
+    const jpg = await toBlob(draw(true), 'image/jpeg', 0.82);
+    if (!jpg) throw new Error('Kunne ikke behandle bildet.');
+    return { blob: jpg, ext: 'jpg' };
+  }
+
+  async function addImage(file) {
+    const { blob, ext } = await processImage(file);
+    const stem = slug(file.name.replace(/\.[^.]+$/, '')) || 'bilde';
+    let name;
+    do { name = stem + '-' + Math.random().toString(36).slice(2, 6) + '.' + ext; } while (pending.has(name));
+    const rec = { name, type: blob.type, blob };
+    pending.set(name, { ...rec, url: URL.createObjectURL(blob) });
+    try { await idb.put(rec); } catch (e) { toast('Bildet kunne ikke lagres midlertidig i nettleseren. Det forsvinner hvis du laster siden på nytt.', 8000); }
+    return name;
+  }
+
+  // Legger et ferdig bilde i køen over bilder som skal publiseres (brukes når forslag godkjennes).
+  async function addPendingBlob(name, blob) {
+    const old = pending.get(name);
+    if (old) URL.revokeObjectURL(old.url);
+    const rec = { name, type: blob.type, blob };
+    pending.set(name, { ...rec, url: URL.createObjectURL(blob) });
+    try { await idb.put(rec); } catch (e) { toast('Bildet kunne ikke lagres midlertidig i nettleseren.', 8000); }
+  }
+
+  const blobB64 = (blob) => new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result).split(',')[1]);
+    r.onerror = () => rej(r.error);
+    r.readAsDataURL(blob);
+  });
+
+  /* Enkel ZIP-skriver (uten komprimering) for manuell publisering med bilder. */
+  const crcTable = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(u8) {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < u8.length; i++) c = crcTable[(c ^ u8[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function makeZip(files) {
+    const enc = new TextEncoder();
+    const chunks = [], central = [];
+    let offset = 0;
+    const d = new Date();
+    const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+    const dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    files.forEach((f) => {
+      const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+      lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true); lh.setUint32(14, crc, true);
+      lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+      chunks.push(new Uint8Array(lh.buffer), name, f.data);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+      ch.setUint16(12, dosTime, true); ch.setUint16(14, dosDate, true); ch.setUint32(16, crc, true);
+      ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true);
+      ch.setUint32(42, offset, true);
+      central.push(new Uint8Array(ch.buffer), name);
+      offset += 30 + name.length + size;
+    });
+    const cdSize = central.reduce((s, c) => s + c.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+    return new Blob([...chunks, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+  }
+
   /* ---------- eksport ---------- */
   function finalize() {
     const d = clone(draft);
@@ -141,12 +313,16 @@
 
   function warnings(d) {
     const ids = new Set(d.articles.map((a) => a.id));
+    const publishedRefs = refsOf(base);
     const w = [];
     d.articles.forEach((a) => {
       if (!String(a.title || '').trim()) w.push('En artikkel mangler tittel.');
       (String(a.body || '').match(/#\/artikkel\/[a-z0-9-]+/g) || []).forEach((m) => {
         const id = m.slice(11);
         if (!ids.has(id)) w.push('«' + a.title + '» lenker til en artikkel som ikke finnes.');
+      });
+      imageNames(a.body).forEach((n) => {
+        if (!pending.has(imgName(n)) && !publishedRefs.has(imgName(n))) w.push('«' + a.title + '» bruker bildet «' + imgName(n) + '» som ikke er lastet opp.');
       });
     });
     return w;
@@ -162,40 +338,59 @@
     constructor(status, msg) { super(msg); this.status = status; }
   }
 
-  const gh = {
-    cfg() {
-      try {
-        const c = JSON.parse(localStorage.getItem(GH_CFG) || 'null');
-        if (!c) return null;
-        c.token = localStorage.getItem(GH_TOK) || sessionStorage.getItem(GH_TOK) || '';
-        return c.owner && c.repo && c.token ? c : null;
-      } catch (e) { return null; }
-    },
-    save(c, remember) {
-      try {
-        localStorage.setItem(GH_CFG, JSON.stringify({ owner: c.owner, repo: c.repo, branch: c.branch, path: c.path }));
-        localStorage.removeItem(GH_TOK);
-        sessionStorage.removeItem(GH_TOK);
-        (remember ? localStorage : sessionStorage).setItem(GH_TOK, c.token);
-      } catch (e) { toast('Kunne ikke lagre tilkoblingen i nettleseren.'); }
-    },
-    clear() {
-      try {
-        localStorage.removeItem(GH_CFG);
-        localStorage.removeItem(GH_TOK);
-        sessionStorage.removeItem(GH_TOK);
-      } catch (e) { /* ignorer */ }
-    }
-  };
+  // Lagrer en tilkobling (repo + nøkkel). Nøkkelen ligger adskilt fra resten av innstillingene.
+  function cfgStore(cfgKey, tokKey) {
+    return {
+      cfg() {
+        try {
+          const c = JSON.parse(localStorage.getItem(cfgKey) || 'null');
+          if (!c) return null;
+          c.token = localStorage.getItem(tokKey) || sessionStorage.getItem(tokKey) || '';
+          return c.owner && c.repo && c.token ? c : null;
+        } catch (e) { return null; }
+      },
+      save(c, remember) {
+        try {
+          const rest = { ...c };
+          delete rest.token;
+          localStorage.setItem(cfgKey, JSON.stringify(rest));
+          localStorage.removeItem(tokKey);
+          sessionStorage.removeItem(tokKey);
+          (remember ? localStorage : sessionStorage).setItem(tokKey, c.token);
+        } catch (e) { toast('Kunne ikke lagre tilkoblingen i nettleseren.'); }
+      },
+      remembered() { try { return !!localStorage.getItem(tokKey); } catch (e) { return false; } },
+      clear() {
+        try {
+          localStorage.removeItem(cfgKey);
+          localStorage.removeItem(tokKey);
+          sessionStorage.removeItem(tokKey);
+        } catch (e) { /* ignorer */ }
+      }
+    };
+  }
+  const gh = cfgStore(GH_CFG, GH_TOK);                       // hovedadmin: kan publisere direkte
+  const inbox = cfgStore('hbe:inbox', 'hbe:inboxtoken');     // innboks for forslag til godkjenning
+
+  // Rollen avgjøres av hvilken nøkkel som er koblet til, og GitHub håndhever tilgangen.
+  const role = () => (gh.cfg() ? 'admin' : inbox.cfg() ? 'editor' : 'lokal');
+  function updateRole() {
+    const el = $('#role');
+    if (!el) return;
+    const r = role();
+    el.dataset.role = r;
+    el.textContent = r === 'admin' ? 'Hovedadmin' : r === 'editor' ? 'Redaktør' : 'Ikke tilkoblet';
+  }
 
   async function ghFetch(c, url, opts = {}) {
+    const { raw, accept, ...init } = opts;
     let res;
     try {
       res = await fetch('https://api.github.com' + url, {
-        ...opts,
+        ...init,
         cache: 'no-store',
         headers: {
-          'Accept': 'application/vnd.github+json',
+          'Accept': accept || 'application/vnd.github+json',
           'Authorization': 'Bearer ' + c.token,
           'X-GitHub-Api-Version': '2022-11-28',
           ...(opts.body ? { 'Content-Type': 'application/json' } : {})
@@ -209,11 +404,11 @@
       try { m = (await res.json()).message || ''; } catch (e) { /* ingen tekst */ }
       throw new GhError(res.status, m);
     }
-    return res.json();
+    return raw ? res.blob() : res.json();
   }
 
   const ghRepoUrl = (c) => '/repos/' + encodeURIComponent(c.owner) + '/' + encodeURIComponent(c.repo);
-  const ghFilePath = (c) => ghRepoUrl(c) + '/contents/' + c.path.split('/').map(encodeURIComponent).join('/');
+  const ghFilePath = (c, p = c.path) => ghRepoUrl(c) + '/contents/' + p.split('/').map(encodeURIComponent).join('/');
 
   function b64enc(s) {
     let bin = '';
@@ -239,6 +434,12 @@
     if (sha) body.sha = sha;
     if (c.branch) body.branch = c.branch;
     return ghFetch(c, ghFilePath(c), { method: 'PUT', body: JSON.stringify(body) });
+  }
+
+  async function ghPutBlob(c, path, blob, message) {
+    const body = { message, content: await blobB64(blob) };
+    if (c.branch) body.branch = c.branch;
+    return ghFetch(c, ghFilePath(c, path), { method: 'PUT', body: JSON.stringify(body) });
   }
 
   function ghMessage(e) {
@@ -279,12 +480,28 @@
       const conflict = remote && (baseSha ? remote.sha !== baseSha : (remote.data.version || '') !== (base.version || ''));
       if (conflict && !confirm('Noen har publisert nye endringer etter at du åpnet editoren. Hvis du publiserer nå, overskrives disse. Publisere likevel?')) return;
 
+      // Bilder lastes opp først, så artiklene aldri peker på bilder som mangler.
+      const imgs = referencedPending(d);
+      const dir = c.path.includes('/') ? c.path.slice(0, c.path.lastIndexOf('/') + 1) : '';
+      for (let i = 0; i < imgs.length; i++) {
+        if (btn) btn.textContent = 'Laster opp bilde ' + (i + 1) + ' av ' + imgs.length + ' …';
+        try {
+          await ghPutBlob(c, dir + 'bilder/' + imgs[i].name, imgs[i].blob, 'Legg til bilde ' + imgs[i].name);
+        } catch (e) {
+          // 422 med «sha» betyr at bildet allerede ligger der (for eksempel etter en avbrutt publisering)
+          if (!(e instanceof GhError && e.status === 422 && /sha/i.test(e.message))) throw e;
+        }
+      }
+      if (btn) btn.textContent = 'Publiserer …';
+
       const res = await ghPutFile(c, json(d), remote ? remote.sha : null, 'Oppdater håndbok (' + d.version + ')');
       baseSha = (res && res.content && res.content.sha) || null;
       draft = d;
       base = clone(d);
       origin = clone(d);
       persist();
+      await dropPending();
+      if (hooks.afterPublish) await hooks.afterPublish();
       toast('Publisert! Det tar vanligvis 1–2 minutter før endringene er ute i håndboken.', 10000);
     } catch (e) {
       toast(ghMessage(e), 10000);
@@ -374,23 +591,30 @@
     });
   }
 
-  function download(d) {
-    const blob = new Blob([json(d)], { type: 'application/json' });
+  function downloadBlob(blob, filename) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'articles.json';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
   }
+  const download = (d) => downloadBlob(new Blob([json(d)], { type: 'application/json' }), 'articles.json');
 
   async function doExport(kind) {
     const d = finalize();
     const w = warnings(d);
     if (w.length && !confirm('Advarsler:\n\n' + w.slice(0, 6).join('\n') + '\n\nFortsette likevel?')) return;
     try {
-      if (kind === 'file') {
+      const imgs = referencedPending(d);
+      if (imgs.length) {
+        // Med nye bilder pakkes alt i én zip som pakkes ut i håndbok-mappen
+        const files = [{ name: 'content/articles.json', data: new TextEncoder().encode(json(d)) }];
+        for (const r of imgs) files.push({ name: 'content/bilder/' + r.name, data: new Uint8Array(await r.blob.arrayBuffer()) });
+        downloadBlob(makeZip(files), 'handbok-oppdatering.zip');
+        toast('handbok-oppdatering.zip er lastet ned. Pakk den ut i håndbok-mappen på webserveren og la den overskrive eksisterende filer.', 10000);
+      } else if (kind === 'file') {
         const h = await window.showSaveFilePicker({
           suggestedName: 'articles.json',
           types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
@@ -417,6 +641,9 @@
     const c = changes();
     const canSave = typeof window.showSaveFilePicker === 'function';
     const ghOn = !!gh.cfg();
+    const isEditor = role() === 'editor';
+    updateRole();
+    const imgCount = referencedPending(draft).length;
     const parts = [];
     if (c.added) parts.push(c.added + (c.added === 1 ? ' ny' : ' nye'));
     if (c.edited) parts.push(c.edited + (c.edited === 1 ? ' endret' : ' endrede'));
@@ -441,7 +668,7 @@
       if (!f && a.category !== lastCat) { head = `<li class="group-title">${esc(a.category)}</li>`; lastCat = a.category; }
       return head + `<li class="row">
         <div class="row-main"><strong>${esc(a.title)}</strong>
-          <div class="meta"><span class="tag">${esc(a.category)}</span>${st ? `<span class="badge-new">${st}</span>` : ''}<span>Oppdatert ${esc(a.updated || '')}</span></div></div>
+          <div class="meta"><span class="tag">${esc(a.category)}</span>${st ? `<span class="badge-new">${st}</span>` : ''}${hooks.rowBadge ? hooks.rowBadge(a) : ''}<span>Oppdatert ${esc(a.updated || '')}</span></div></div>
         <div class="row-actions">
           <button class="btn small" data-act="edit" data-id="${esc(a.id)}">Rediger</button>
           <button class="btn small" data-act="dup" data-id="${esc(a.id)}">Kopier</button>
@@ -452,23 +679,23 @@
     root.innerHTML = `
       <div class="ed-bar">
         <button class="btn primary" id="new">+ Ny artikkel</button>
-        <button class="btn" id="cats">Kategorier</button>
+        ${isEditor ? '' : '<button class="btn" id="cats">Kategorier</button>'}
+        ${hooks.barHtml ? hooks.barHtml() : ''}
         <span class="grow"></span>
-        <button class="btn" id="ghset">${ghOn ? '⚙ GitHub (tilkoblet)' : '⚙ Koble til GitHub'}</button>
-        <button class="btn" id="imp">Importer fil</button>
-        <input type="file" id="file" accept="application/json,.json" hidden>
+        <button class="btn" id="ghset">⚙ Tilkobling</button>
+        ${isEditor ? '' : '<button class="btn" id="imp">Importer fil</button><input type="file" id="file" accept="application/json,.json" hidden>'}
       </div>
       <div class="ed-status ${c.total ? 'dirty' : ''}" id="status">
-        ${c.total
-          ? `<p><strong>Ikke publisert ennå:</strong> ${parts.join(', ')}.</p>
+        ${isEditor && hooks.editorStatus ? hooks.editorStatus(c, parts, imgCount) : c.total
+          ? `<p><strong>Ikke publisert ennå:</strong> ${parts.join(', ')}${imgCount ? ` og ${imgCount} ${imgCount === 1 ? 'nytt bilde' : 'nye bilder'}` : ''}.</p>
              <p>${ghOn
                ? 'Trykk «Publiser» for å legge endringene ut i håndboken. Alle får dem neste gang de er på nett.'
                : 'Når du er fornøyd: lagre filen og legg den på webserveren (erstatt <code>content/articles.json</code>). Da får alle oppdateringen neste gang de er på nett. Eller koble til GitHub for å publisere med ett klikk.'}</p>
              <div class="ed-bar" style="margin:8px 0 0">
                ${ghOn && baseSrc === 'gh' ? '<button class="btn primary" id="pub">🚀 Publiser til GitHub</button>' : ''}
                ${ghOn && baseSrc !== 'gh' ? '<span class="hint">Fikk ikke hentet siste versjon fra GitHub. Last siden på nytt når du er på nett for å publisere.</span>' : ''}
-               <button class="btn${ghOn ? '' : ' primary'}" id="dl">⬇ Last ned articles.json</button>
-               ${canSave ? '<button class="btn" id="save">💾 Lagre direkte til fil …</button>' : ''}
+               <button class="btn${ghOn ? '' : ' primary'}" id="dl">${imgCount ? '⬇ Last ned oppdatering (.zip)' : '⬇ Last ned articles.json'}</button>
+               ${canSave && !imgCount ? '<button class="btn" id="save">💾 Lagre direkte til fil …</button>' : ''}
                <button class="btn danger" id="discard">Forkast endringer</button>
              </div>`
           : `<p>Ingen endringer ennå. Alt her er likt det som er publisert.</p>
@@ -478,9 +705,9 @@
       ${items.length ? `<ul class="rows">${rows}</ul>` : '<p class="empty">Ingen artikler. Trykk «Ny artikkel» for å lage den første.</p>'}`;
 
     $('#new').onclick = () => renderEdit(null);
-    $('#cats').onclick = renderCats;
-    $('#dl').onclick = () => doExport('download');
-    $('#ghset').onclick = renderGh;
+    if ($('#cats')) $('#cats').onclick = renderCats;
+    if ($('#dl')) $('#dl').onclick = () => doExport('download');
+    $('#ghset').onclick = () => (hooks.renderConnections ? hooks.renderConnections() : renderGh());
     if ($('#pub')) $('#pub').onclick = publishGH;
     if ($('#save')) $('#save').onclick = () => doExport('file');
     if ($('#discard')) $('#discard').onclick = () => {
@@ -488,11 +715,15 @@
       draft = clone(base);
       origin = clone(base);
       store.clear();
+      dropPending();
+      if (hooks.onDiscard) hooks.onDiscard();
       renderList();
       toast('Endringene er forkastet.');
     };
-    $('#imp').onclick = () => $('#file').click();
-    $('#file').onchange = importFile;
+    if ($('#imp')) {
+      $('#imp').onclick = () => $('#file').click();
+      $('#file').onchange = importFile;
+    }
     $('#flt').oninput = (e) => {
       filter = e.target.value;
       const pos = e.target.selectionStart;
@@ -500,6 +731,7 @@
       const el = $('#flt'); el.focus(); el.setSelectionRange(pos, pos);
     };
     root.querySelector('.rows') && root.querySelector('.rows').addEventListener('click', onRowClick);
+    if (hooks.afterList) hooks.afterList();
   }
 
   function onRowClick(e) {
@@ -519,7 +751,10 @@
       return renderEdit(copy.id);
     }
     if (b.dataset.act === 'del') {
-      if (!confirm('Slette «' + a.title + '»? Dette kan ikke angres, men du kan forkaste alle endringer før du publiserer.')) return;
+      const msg = role() === 'editor'
+        ? 'Slette «' + a.title + '» i utkastet ditt? Artikkelen fjernes først fra håndboken når sletteforslaget er sendt inn og godkjent.'
+        : 'Slette «' + a.title + '»? Dette kan ikke angres, men du kan forkaste alle endringer før du publiserer.';
+      if (!confirm(msg)) return;
       draft.articles = draft.articles.filter((x) => x.id !== id);
       draft.articles.forEach((x) => { x.related = (x.related || []).filter((r) => r !== id); });
       persist();
@@ -587,6 +822,7 @@
     note: (ta) => lineOp(ta, (l) => '> ' + (l.replace(/^>\s*!?\s*/, '') || 'Viktig å vite')),
     warn: (ta) => lineOp(ta, (l) => '> ! ' + (l.replace(/^>\s*!?\s*/, '') || 'Advarsel')),
     table: (ta) => insertBlock(ta, '\n| Kolonne 1 | Kolonne 2 |\n|---|---|\n| Verdi | Verdi |\n| Verdi | Verdi |\n'),
+    img: () => { const f = $('#imgFile'); if (f) f.click(); },
     ext: (ta) => {
       const url = prompt('Skriv inn nettadressen (må starte med https://):', 'https://');
       if (!url || !/^https?:\/\//.test(url)) { if (url) toast('Adressen må starte med http:// eller https://'); return; }
@@ -608,7 +844,7 @@
     const others = draft.articles.filter((x) => x.id !== a.id);
     const catOpts = draft.categories.map((c) => `<option value="${esc(c)}"${c === a.category ? ' selected' : ''}>${esc(c)}</option>`).join('')
       + (a.category && !draft.categories.includes(a.category) ? `<option value="${esc(a.category)}" selected>${esc(a.category)}</option>` : '')
-      + '<option value="__new">+ Ny kategori …</option>';
+      + (role() === 'editor' ? '' : '<option value="__new">+ Ny kategori …</option>');
 
     root.innerHTML = `
       <div class="ed-bar">
@@ -623,8 +859,16 @@
           <label>Kategori <select id="f-cat">${catOpts}</select></label>
           <label>Kort sammendrag <small>(vises i oversikten)</small><input type="text" id="f-sum" value="${esc(a.summary || '')}" placeholder="Én setning om hva artikkelen handler om"></label>
           <label>Søkeord <small>(skilt med komma, gjerne synonymer folk kan finne på å søke etter)</small><input type="text" id="f-tags" value="${esc((a.tags || []).join(', '))}" placeholder="bestilling, rekvisita, innkjøp"></label>
-          <fieldset><legend>Se også <small>(vises nederst i artikkelen)</small></legend>
-            ${others.length ? others.map((o) => `<label><input type="checkbox" name="rel" value="${esc(o.id)}"${(a.related || []).includes(o.id) ? ' checked' : ''}> ${esc(o.title)}</label>`).join('') : '<small>Ingen andre artikler ennå.</small>'}
+          <fieldset><legend>Se også <small id="relCount">(vises nederst i artikkelen)</small></legend>
+            ${others.length ? `
+            <div class="rel-tools">
+              <input type="search" id="relQ" placeholder="Søk etter artikkel …" aria-label="Søk etter artikler å lenke til">
+              <label class="rel-only"><input type="checkbox" id="relOnly"> Bare valgte</label>
+            </div>
+            <div id="relList" class="rel-list">
+              ${others.map((o) => `<label data-q="${esc((o.title + ' ' + o.category + ' ' + (o.tags || []).join(' ') + ' ' + (o.summary || '')).toLowerCase())}"><input type="checkbox" name="rel" value="${esc(o.id)}"${(a.related || []).includes(o.id) ? ' checked' : ''}> <span>${esc(o.title)} <small>${esc(o.category)}</small></span></label>`).join('')}
+              <p class="hint" id="relNone" hidden>Ingen treff.</p>
+            </div>` : '<small>Ingen andre artikler ennå.</small>'}
           </fieldset>
           <div class="field">
             <span class="lbl">Innhold</span>
@@ -636,6 +880,7 @@
               <button type="button" data-tb="note" title="Merknad">💡 Merknad</button>
               <button type="button" data-tb="warn" title="Advarsel">⚠ Advarsel</button>
               <button type="button" data-tb="table" title="Sett inn tabell">Tabell</button>
+              <button type="button" data-tb="img" title="Legg inn bilde">🖼 Bilde</button>
               <button type="button" data-tb="ext" title="Lenke til nettside">🔗 Nettlenke</button>
               <select id="linkSel" aria-label="Lenke til annen artikkel">
                 <option value="">Lenke til artikkel …</option>
@@ -643,7 +888,8 @@
               </select>
             </div>
             <textarea id="f-body" placeholder="Skriv her. Marker tekst og bruk knappene over for å formatere.">${esc(a.body || '')}</textarea>
-            <p class="hint">Tom linje gir nytt avsnitt. Forhåndsvisningen viser hvordan det blir i håndboken.</p>
+            <input type="file" id="imgFile" accept="image/*" multiple hidden>
+            <p class="hint">Tom linje gir nytt avsnitt. For bilder: trykk «Bilde», eller lim inn / dra et bilde inn i tekstfeltet. Bildene gjøres automatisk mindre. Forhåndsvisningen viser hvordan det blir i håndboken.</p>
           </div>
         </form>
         <div class="preview-wrap">
@@ -663,7 +909,7 @@
     });
     const preview = () => {
       const f = collect();
-      $('#preview').innerHTML = `<h1>${esc(f.title || 'Uten tittel')}</h1>` + (markdown(f.body) || '<p class="hint">Innholdet vises her.</p>');
+      $('#preview').innerHTML = `<h1>${esc(f.title || 'Uten tittel')}</h1>` + (markdown(f.body, { imageSrc }) || '<p class="hint">Innholdet vises her.</p>');
     };
     preview();
     let initial = JSON.stringify(collect());
@@ -684,6 +930,58 @@
       const b = e.target.closest('button[data-tb]');
       if (b) TOOLS[b.dataset.tb](ta);
     });
+    /* Søk i «Se også» */
+    if ($('#relQ')) {
+      const items = [...root.querySelectorAll('#relList label')];
+      const refresh = () => {
+        const terms = $('#relQ').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        const only = $('#relOnly').checked;
+        let shown = 0;
+        items.forEach((l) => {
+          const vis = terms.every((t) => l.dataset.q.includes(t)) && (!only || l.querySelector('input').checked);
+          l.hidden = !vis;
+          if (vis) shown++;
+        });
+        $('#relNone').hidden = shown > 0;
+        const n = root.querySelectorAll('input[name="rel"]:checked').length;
+        $('#relCount').textContent = n ? '(' + n + ' valgt)' : '(vises nederst i artikkelen)';
+      };
+      $('#relQ').addEventListener('input', refresh);
+      $('#relQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+      $('#relOnly').addEventListener('change', refresh);
+      $('#relList').addEventListener('change', refresh);
+      refresh();
+    }
+
+    /* Bilder */
+    const handleFiles = async (files) => {
+      for (const file of files) {
+        try {
+          const name = await addImage(file);
+          const nice = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+          const alt = prompt('Beskriv bildet kort. Teksten vises under bildet og leses opp for synshemmede:', /^(image|bilde|img|screenshot|skjermbilde|\d)/i.test(nice) ? '' : nice);
+          insertBlock(ta, '\n![' + (alt || '').replace(/[[\]\n]/g, ' ').trim() + '](bilder/' + name + ')\n\n');
+          toast('Bildet er lagt inn. Det publiseres sammen med artikkelen.');
+        } catch (err) {
+          toast(err && err.message ? err.message : 'Kunne ikke legge inn bildet.', 8000);
+        }
+      }
+    };
+    $('#imgFile').addEventListener('change', async (e) => {
+      const files = [...e.target.files];
+      e.target.value = '';
+      await handleFiles(files);
+    });
+    ta.addEventListener('paste', (e) => {
+      const files = [...(e.clipboardData ? e.clipboardData.files : [])].filter((f) => f.type.startsWith('image/'));
+      if (files.length) { e.preventDefault(); handleFiles(files); }
+    });
+    ta.addEventListener('dragover', (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) e.preventDefault(); });
+    ta.addEventListener('drop', (e) => {
+      const files = [...(e.dataTransfer ? e.dataTransfer.files : [])].filter((f) => f.type.startsWith('image/'));
+      if (files.length) { e.preventDefault(); handleFiles(files); }
+    });
+
     $('#linkSel').addEventListener('change', (e) => {
       const target = draft.articles.find((x) => x.id === e.target.value);
       if (target) {
@@ -816,13 +1114,23 @@
   }
 
   async function start() {
+    if (hooks.init) await hooks.init();
     await loadBase();
-
+    await loadPending();
     const msg = syncDraft();
+    await cleanupPending();
     renderList();
     if (msg) toast(msg, 9000);
     else if (changes().total) toast('Du har endringer som ikke er publisert ennå.', 5000);
   }
 
-  start();
+  // godkjenning.js bygger videre på dette og starter editoren når alt er lastet.
+  window.HBE = {
+    hooks, root, esc, markdown, imageNames, $, clone, today, slug, uniqueId, toast, contentSig, json,
+    store, persist, changes, gh, inbox, role, GhError, ghFetch, ghMessage, ghRepoUrl, ghFilePath, ghPutBlob,
+    b64enc, b64dec, detectRepo, pending, imgName, imageSrc, addPendingBlob,
+    renderList, renderGh, start,
+    get draft() { return draft; },
+    get base() { return base; }
+  };
 })();

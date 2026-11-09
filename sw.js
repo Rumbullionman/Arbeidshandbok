@@ -2,7 +2,7 @@
    - App-skallet lagres ved installasjon, så håndboken åpnes uten nett.
    - Innhold (content/*) hentes fra nett først, med lagret kopi som reserve.
    Endre VERSION når du endrer index.html, style.css, app.js eller ikoner. */
-const VERSION = 'v3';
+const VERSION = 'v5';
 const SHELL_CACHE = 'handbok-shell-' + VERSION;
 const CONTENT_CACHE = 'handbok-content';
 
@@ -14,6 +14,7 @@ const SHELL = [
   'md.js',
   'editor.html',
   'editor.js',
+  'godkjenning.js',
   'editor.css',
   'manifest.webmanifest',
   'icons/icon-192.png',
@@ -60,6 +61,16 @@ async function networkFirst(request, cacheName) {
   }
 }
 
+// Bilder har unike navn og endres aldri: lagret kopi først, så går de raskt og virker uten nett
+async function contentCacheFirst(request) {
+  const cache = await caches.open(CONTENT_CACHE);
+  const cached = await cache.match(request, { ignoreSearch: true });
+  if (cached) return cached;
+  const fresh = await fetch(request);
+  if (fresh && fresh.ok) cache.put(request, fresh.clone());
+  return fresh;
+}
+
 async function cacheFirst(request) {
   const cached = await caches.match(request, { ignoreSearch: true });
   if (cached) return cached;
@@ -77,7 +88,13 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Innhold og bilder i content/: nett først, lagret kopi som reserve
+  // Bilder: lagret kopi først
+  if (url.pathname.includes('/content/bilder/')) {
+    event.respondWith(contentCacheFirst(req));
+    return;
+  }
+
+  // Innhold i content/: nett først, lagret kopi som reserve
   if (url.pathname.includes('/content/')) {
     event.respondWith(networkFirst(req, CONTENT_CACHE));
     return;

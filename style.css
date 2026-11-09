@@ -132,3 +132,8 @@ h3 { font-size: 1rem; margin: 18px 0 6px; }
   body { background: #fff; color: #000; }
   .article { border: none; padding: 0; }
 }
+
+/* Bilder i artikler */
+.article figure { margin: 16px 0; }
+.article img { display: block; max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border); background: var(--accent-soft); }
+.article figcaption { font-size: .85rem; color: var(--muted); margin-top: 6px; }

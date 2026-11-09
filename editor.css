@@ -33,12 +33,12 @@ body.editor main { max-width: 1200px; }
 .ed-form label, .ed-form .field, .ed-form fieldset { display: block; margin: 0 0 14px; }
 .ed-form label, .ed-form .lbl, .ed-form legend { font-weight: 600; font-size: .92rem; }
 .ed-form small { font-weight: 400; color: var(--muted); }
-.ed-form input[type="text"], .ed-form input[type="password"], .ed-form select, .ed-form textarea, .ed-inline input[type="text"] {
+.ed-form input[type="text"], .ed-form input[type="password"], .ed-form input[type="search"], .ed-form select, .ed-form textarea, .ed-inline input[type="text"] {
   width: 100%; margin-top: 4px; padding: 11px 12px; font: inherit;
   border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text);
 }
 .ed-form textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92rem; line-height: 1.5; min-height: 340px; resize: vertical; }
-.ed-form fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; max-height: 190px; overflow: auto; }
+.ed-form fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px 10px; }
 .ed-form fieldset label { display: flex; gap: 8px; align-items: center; font-weight: 400; margin: 6px 0; }
 
 .tb { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
@@ -58,3 +58,30 @@ body.editor main { max-width: 1200px; }
 .ed-help ol { margin: 10px 0 4px; padding-left: 1.3rem; }
 .ed-help li { margin: 6px 0; }
 .ed-help label { margin-top: 10px; }
+
+.ed-form fieldset label[hidden], .rel-list p[hidden] { display: none; }
+.rel-tools { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 4px 0 6px; }
+.rel-tools input[type="search"] { flex: 1 1 200px; margin: 0; }
+.ed-form .rel-only { margin: 0; white-space: nowrap; }
+.rel-list { max-height: 210px; overflow: auto; border-top: 1px solid var(--border); margin-top: 6px; }
+.rel-list label span small { color: var(--muted); margin-left: 6px; }
+
+/* Roller og godkjenning */
+.rolechip { font-size: .78rem; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.18); margin-left: auto; margin-right: 12px; white-space: nowrap; }
+.rolechip[data-role="admin"] { background: #fff; color: #1f5f8b; font-weight: 600; }
+.badge-wait { background: var(--warn); color: #fff; padding: 2px 8px; border-radius: 999px; font-size: .75rem; }
+.st { padding: 2px 8px; border-radius: 999px; font-size: .75rem; background: var(--accent-soft); color: var(--accent); }
+.st-venter { background: var(--warn); color: #fff; }
+.st-godkjent { background: var(--good); color: #fff; }
+.st-avvist { background: #b3261e; color: #fff; }
+.warnbox { border: 1px solid var(--warn); border-left-width: 4px; border-radius: 8px; padding: 10px 14px; margin: 10px 0 14px; background: var(--surface); font-size: .92rem; }
+.warnbox ul { margin: 6px 0 0; padding-left: 1.2rem; }
+.ed-tabs { display: flex; gap: 6px; margin: 8px 0 12px; flex-wrap: wrap; }
+.ed-tabs button { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); }
+.ed-tabs button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.diff { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .85rem; border: 1px solid var(--border); border-radius: 8px; overflow: auto; }
+.diff .d { display: flex; gap: 8px; padding: 1px 10px; white-space: pre-wrap; word-break: break-word; }
+.diff .d span { flex: 0 0 1ch; color: var(--muted); }
+.diff .d.add { background: rgba(43,122,75,.18); }
+.diff .d.del { background: rgba(179,38,30,.18); text-decoration: line-through; text-decoration-color: rgba(179,38,30,.5); }
+.article h2 { margin-top: 0; }
