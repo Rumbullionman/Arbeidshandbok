@@ -2,7 +2,7 @@
    - App-skallet lagres ved installasjon, så håndboken åpnes uten nett.
    - Innhold (content/*) hentes fra nett først, med lagret kopi som reserve.
    Endre VERSION når du endrer index.html, style.css, app.js eller ikoner. */
-const VERSION = 'v5';
+const VERSION = 'v6';
 const SHELL_CACHE = 'handbok-shell-' + VERSION;
 const CONTENT_CACHE = 'handbok-content';
 
@@ -15,6 +15,8 @@ const SHELL = [
   'editor.html',
   'editor.js',
   'godkjenning.js',
+  'wordimport.js',
+  'autolenker.js',
   'editor.css',
   'manifest.webmanifest',
   'icons/icon-192.png',

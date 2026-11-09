@@ -67,6 +67,16 @@ Editoren ordner selv `id`, «Oppdatert»-datoen, versjonsnummeret og at alle kat
 - Vil du fjerne et bilde fra en artikkel, sletter du linjen som starter med `![`. Selve bildefilen blir liggende i `content/bilder/` (du kan slette den på GitHub hvis du vil rydde).
 - Formatet i teksten er `![Beskrivelse](bilder/navn.jpg)` på en egen linje.
 
+### Hent inn en Word-fil
+
+I redigeringen av en artikkel (eller med «📄 Ny fra Word» på oversikten) velger du en `.docx`-fil. Tekst, overskrifter, lister, tabeller, nettlenker, fet/kursiv og bilder legges inn i **Innhold**, så du kan rette det manuelt. Alt skjer i nettleseren din. Første toppoverskrift (eller Word-stilen «Tittel») brukes som artikkeltittel hvis tittelfeltet er tomt.
+
+Begrensninger: bare `.docx` (lagre eldre `.doc` på nytt i Word), lister blir flate, bilder i tabeller og formatene EMF/WMF/SVG hoppes over, og tekstbokser, fotnoter og topp-/bunntekst tas ikke med. Se alltid over resultatet i forhåndsvisningen.
+
+### Automatiske lenker mellom artikler
+
+«✨ Lag lenker» leter i teksten etter titler og søkeord fra andre artikler og gjør første omtale av hver til en lenke (nye lenker utheves gult i forhåndsvisningen). Overskrifter, bilder og eksisterende lenker røres ikke. Vil du ikke ha en lenke, trykker du den lille **✕** ved siden av den i forhåndsvisningen, så blir den vanlig tekst igjen.
+
 ### «Se også»
 
 Under hver artikkel kan du velge relaterte artikler. Med mange artikler bruker du søkefeltet over listen: du kan søke på tittel, kategori og søkeord. «Bare valgte» viser det du allerede har krysset av. Valg du har gjort, beholdes selv om de er skjult av søket.
@@ -153,7 +163,7 @@ python3 -m http.server 8080
 
 ## Når du endrer selve appen
 
-Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `editor.js`, `godkjenning.js`, `md.js` eller ikoner, må du øke `VERSION` i `sw.js` (fra `v5` til `v6`, og så videre). Da henter alle enheter ny app neste gang de er på nett. Rene innholdsendringer krever ikke dette.
+Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `editor.js`, `godkjenning.js`, `wordimport.js`, `autolenker.js`, `md.js` eller ikoner, må du øke `VERSION` i `sw.js` (fra `v6` til `v7`, og så videre). Da henter alle enheter ny app neste gang de er på nett. Rene innholdsendringer krever ikke dette.
 
 ## Filer
 
@@ -162,6 +172,8 @@ Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `edi
 | `index.html`, `style.css`, `app.js`, `md.js` | Selve håndboken |
 | `editor.html`, `editor.js`, `editor.css` | Redigeringsverktøyet |
 | `godkjenning.js` | Roller, innsending og godkjenning |
+| `wordimport.js` | Leser Word-filer (.docx) i nettleseren |
+| `autolenker.js` | Finner og lager lenker til andre artikler |
 | `sw.js` | Offline og hurtigbuffer |
 | `manifest.webmanifest`, `icons/` | Installering og ikon |
 | `content/articles.json` | Alle artiklene |

@@ -85,3 +85,13 @@ body.editor main { max-width: 1200px; }
 .diff .d.add { background: rgba(43,122,75,.18); }
 .diff .d.del { background: rgba(179,38,30,.18); text-decoration: line-through; text-decoration-color: rgba(179,38,30,.5); }
 .article h2 { margin-top: 0; }
+
+/* Automatiske lenker og ✕-knapp */
+.unlink {
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  width: 18px; height: 18px; margin-left: 3px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  font-size: 10px; line-height: 1; cursor: pointer;
+}
+.unlink:hover, .unlink:focus-visible { background: var(--warn); border-color: var(--warn); color: #fff; }
+.article a.auto-link { background: rgba(255, 213, 79, .35); border-radius: 3px; }

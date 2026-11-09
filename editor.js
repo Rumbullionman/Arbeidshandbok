@@ -679,6 +679,7 @@
     root.innerHTML = `
       <div class="ed-bar">
         <button class="btn primary" id="new">+ Ny artikkel</button>
+        <button class="btn" id="newdoc" title="Lag en ny artikkel av en Word-fil">📄 Ny fra Word</button>
         ${isEditor ? '' : '<button class="btn" id="cats">Kategorier</button>'}
         ${hooks.barHtml ? hooks.barHtml() : ''}
         <span class="grow"></span>
@@ -705,6 +706,11 @@
       ${items.length ? `<ul class="rows">${rows}</ul>` : '<p class="empty">Ingen artikler. Trykk «Ny artikkel» for å lage den første.</p>'}`;
 
     $('#new').onclick = () => renderEdit(null);
+    $('#newdoc').onclick = () => {
+      renderEdit(null);
+      const f = $('#docFile');
+      if (f) f.click();
+    };
     if ($('#cats')) $('#cats').onclick = renderCats;
     if ($('#dl')) $('#dl').onclick = () => doExport('download');
     $('#ghset').onclick = () => (hooks.renderConnections ? hooks.renderConnections() : renderGh());
@@ -823,6 +829,7 @@
     warn: (ta) => lineOp(ta, (l) => '> ! ' + (l.replace(/^>\s*!?\s*/, '') || 'Advarsel')),
     table: (ta) => insertBlock(ta, '\n| Kolonne 1 | Kolonne 2 |\n|---|---|\n| Verdi | Verdi |\n| Verdi | Verdi |\n'),
     img: () => { const f = $('#imgFile'); if (f) f.click(); },
+    doc: () => { const f = $('#docFile'); if (f) f.click(); },
     ext: (ta) => {
       const url = prompt('Skriv inn nettadressen (må starte med https://):', 'https://');
       if (!url || !/^https?:\/\//.test(url)) { if (url) toast('Adressen må starte med http:// eller https://'); return; }
@@ -882,6 +889,8 @@
               <button type="button" data-tb="table" title="Sett inn tabell">Tabell</button>
               <button type="button" data-tb="img" title="Legg inn bilde">🖼 Bilde</button>
               <button type="button" data-tb="ext" title="Lenke til nettside">🔗 Nettlenke</button>
+              <button type="button" data-tb="doc" title="Hent tekst og bilder fra en Word-fil (.docx)">📄 Fra Word</button>
+              <button type="button" data-tb="auto" title="Finn omtaler av andre artikler og gjør dem om til lenker">✨ Lag lenker</button>
               <select id="linkSel" aria-label="Lenke til annen artikkel">
                 <option value="">Lenke til artikkel …</option>
                 ${others.map((o) => `<option value="${esc(o.id)}">${esc(o.title)}</option>`).join('')}
@@ -889,6 +898,7 @@
             </div>
             <textarea id="f-body" placeholder="Skriv her. Marker tekst og bruk knappene over for å formatere.">${esc(a.body || '')}</textarea>
             <input type="file" id="imgFile" accept="image/*" multiple hidden>
+            <input type="file" id="docFile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
             <p class="hint">Tom linje gir nytt avsnitt. For bilder: trykk «Bilde», eller lim inn / dra et bilde inn i tekstfeltet. Bildene gjøres automatisk mindre. Forhåndsvisningen viser hvordan det blir i håndboken.</p>
           </div>
         </form>
@@ -907,10 +917,45 @@
       related: [...root.querySelectorAll('input[name="rel"]:checked')].map((i) => i.value),
       body: ta.value.replace(/\r/g, '').replace(/\s+$/, '')
     });
+    const fresh = new Set();   // artikler som nettopp er lenket automatisk (utheves i forhåndsvisningen)
     const preview = () => {
       const f = collect();
-      $('#preview').innerHTML = `<h1>${esc(f.title || 'Uten tittel')}</h1>` + (markdown(f.body, { imageSrc }) || '<p class="hint">Innholdet vises her.</p>');
+      const pv = $('#preview');
+      pv.innerHTML = `<h1>${esc(f.title || 'Uten tittel')}</h1>` + (markdown(f.body, { imageSrc }) || '<p class="hint">Innholdet vises her.</p>');
+      // liten ✕-knapp ved hver lenke til en annen artikkel: gjør lenken om til vanlig tekst
+      pv.querySelectorAll('a[href^="#/artikkel/"]').forEach((l) => {
+        if (fresh.has(l.getAttribute('href').slice(11))) l.classList.add('auto-link');
+        const x = document.createElement('button');
+        x.type = 'button';
+        x.className = 'unlink';
+        x.title = 'Gjør om til vanlig tekst';
+        x.setAttribute('aria-label', 'Fjern lenken «' + l.textContent + '» og behold teksten');
+        x.textContent = '✕';
+        l.after(x);
+      });
     };
+    const LINK_RE = /\[([^\]]+)\]\(#\/artikkel\/([A-Za-z0-9-]+)\)/g;
+    $('#preview').addEventListener('click', (e) => {
+      const link = e.target.closest('a[href^="#/artikkel/"]');
+      if (link) { e.preventDefault(); return; }
+      const btn = e.target.closest('button.unlink');
+      if (!btn) return;
+      e.preventDefault();
+      const n = [...$('#preview').querySelectorAll('button.unlink')].indexOf(btn);
+      const wanted = btn.previousElementSibling ? btn.previousElementSibling.textContent : '';
+      let m, k = 0, hit = null;
+      LINK_RE.lastIndex = 0;
+      while ((m = LINK_RE.exec(ta.value))) {
+        if (k === n) { hit = m; break; }
+        k++;
+      }
+      if (!hit || hit[1].replace(/[*`]/g, '') !== wanted) {
+        toast('Fant ikke lenken i teksten. Fjern den for hånd i tekstfeltet.');
+        return;
+      }
+      ta.setRangeText(hit[1], hit.index, hit.index + hit[0].length, 'preserve');
+      ta.dispatchEvent(new Event('input'));
+    });
     preview();
     let initial = JSON.stringify(collect());
 
@@ -926,9 +971,59 @@
       e.target.insertBefore(opt, e.target.querySelector('option[value="__new"]'));
       e.target.value = name;
     });
+    const autoLinks = () => {
+      if (!window.HBLink) { toast('Lenkefunksjonen er ikke lastet. Last siden på nytt.'); return; }
+      if (!ta.value.trim()) { toast('Det er ingen tekst å lenke ennå.'); return; }
+      const r = window.HBLink.autoLink(ta.value, draft.articles, a.id);
+      if (!r.count) { toast('Fant ingen steder som nevner andre artikler. (Det letes etter titler og søkeord.)', 6000); return; }
+      r.links.forEach((l) => fresh.add(l.id));
+      ta.value = r.text;
+      ta.dispatchEvent(new Event('input'));
+      toast('La inn ' + r.count + (r.count === 1 ? ' lenke' : ' lenker') + ' (merket gult i forhåndsvisningen). Trykk ✕ ved siden av en lenke for å gjøre den om til vanlig tekst igjen.', 10000);
+    };
     root.querySelector('.tb').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-tb]');
-      if (b) TOOLS[b.dataset.tb](ta);
+      if (!b) return;
+      if (b.dataset.tb === 'auto') autoLinks();
+      else TOOLS[b.dataset.tb](ta);
+    });
+
+    /* Word-import */
+    let importing = false;
+    const importWord = async (file) => {
+      if (!file || importing) return;
+      if (!window.HBWord) { toast('Word-importen er ikke lastet. Last siden på nytt.'); return; }
+      importing = true;
+      toast('Leser Word-filen …', 120000);
+      try {
+        const r = await window.HBWord.convert(file, { addImage });
+        if (!r.body && !r.title) { toast('Fant verken tekst eller bilder i Word-filen.', 8000); return; }
+        const titleEl = $('#f-title');
+        if (r.title && !titleEl.value.trim()) titleEl.value = r.title;
+        if (r.body) {
+          if (ta.value.trim()) insertBlock(ta, '\n' + r.body + '\n');
+          else { ta.value = r.body + '\n'; }
+        }
+        ta.dispatchEvent(new Event('input'));
+        const s = r.stats;
+        const parts = [];
+        if (s.images) parts.push(s.images + (s.images === 1 ? ' bilde' : ' bilder'));
+        if (s.tables) parts.push(s.tables + (s.tables === 1 ? ' tabell' : ' tabeller'));
+        if (s.headings) parts.push(s.headings + (s.headings === 1 ? ' overskrift' : ' overskrifter'));
+        if (s.links) parts.push(s.links + (s.links === 1 ? ' nettlenke' : ' nettlenker'));
+        let msg = 'Word-filen er hentet inn' + (parts.length ? ' (' + parts.join(', ') + ')' : '') + '. Se over teksten og rett opp det som trengs.';
+        if (s.skippedImages) msg += ' ' + s.skippedImages + (s.skippedImages === 1 ? ' bilde' : ' bilder') + ' kunne ikke hentes (format som ikke støttes, eller bilde i tabell).';
+        toast(msg, 14000);
+      } catch (err) {
+        toast(err instanceof window.HBWord.WordError ? err.message : 'Kunne ikke lese Word-filen. Er den lagret som .docx?', 10000);
+      } finally {
+        importing = false;
+      }
+    };
+    $('#docFile').addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      e.target.value = '';
+      importWord(f);
     });
     /* Søk i «Se også» */
     if ($('#relQ')) {
