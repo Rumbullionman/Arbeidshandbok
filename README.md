@@ -77,6 +77,10 @@ Begrensninger: bare `.docx` (lagre eldre `.doc` på nytt i Word), lister blir fl
 
 «✨ Lag lenker» leter i teksten etter titler og søkeord fra andre artikler og gjør første omtale av hver til en lenke (nye lenker utheves gult i forhåndsvisningen). Overskrifter, bilder og eksisterende lenker røres ikke. Vil du ikke ha en lenke, trykker du den lille **✕** ved siden av den i forhåndsvisningen, så blir den vanlig tekst igjen.
 
+### Sammenligning med andre artikler
+
+Når du henter inn en Word-fil sjekkes teksten automatisk mot de andre artiklene. Under tekstfeltet vises setninger som ligner på noe som allerede står i en annen artikkel (så du kan unngå å skrive det samme to steder), og forslag til relaterte artikler. Det samme kan du gjøre når som helst for tekst du har skrevet selv med **«🔍 Finn relaterte»**. «+ Se også» legger artikkelen til i «Se også»-listen. Sammenligningen er en enkel ordsammenligning, så vurder alltid forslagene selv.
+
 ### «Se også»
 
 Under hver artikkel kan du velge relaterte artikler. Med mange artikler bruker du søkefeltet over listen: du kan søke på tittel, kategori og søkeord. «Bare valgte» viser det du allerede har krysset av. Valg du har gjort, beholdes selv om de er skjult av søket.
@@ -163,7 +167,7 @@ python3 -m http.server 8080
 
 ## Når du endrer selve appen
 
-Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `editor.js`, `godkjenning.js`, `wordimport.js`, `autolenker.js`, `md.js` eller ikoner, må du øke `VERSION` i `sw.js` (fra `v6` til `v7`, og så videre). Da henter alle enheter ny app neste gang de er på nett. Rene innholdsendringer krever ikke dette.
+Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `editor.js`, `godkjenning.js`, `wordimport.js`, `autolenker.js`, `md.js` eller ikoner, må du øke `VERSION` i `sw.js` (fra `v7` til `v8`, og så videre). Da henter alle enheter ny app neste gang de er på nett. Rene innholdsendringer krever ikke dette.
 
 ## Filer
 

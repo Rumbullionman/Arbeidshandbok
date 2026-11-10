@@ -890,6 +890,7 @@
               <button type="button" data-tb="img" title="Legg inn bilde">🖼 Bilde</button>
               <button type="button" data-tb="ext" title="Lenke til nettside">🔗 Nettlenke</button>
               <button type="button" data-tb="doc" title="Hent tekst og bilder fra en Word-fil (.docx)">📄 Fra Word</button>
+              <button type="button" data-tb="rel" title="Se over teksten og foreslå relaterte artikler og tekst som finnes fra før">🔍 Finn relaterte</button>
               <button type="button" data-tb="auto" title="Finn omtaler av andre artikler og gjør dem om til lenker">✨ Lag lenker</button>
               <select id="linkSel" aria-label="Lenke til annen artikkel">
                 <option value="">Lenke til artikkel …</option>
@@ -899,6 +900,7 @@
             <textarea id="f-body" placeholder="Skriv her. Marker tekst og bruk knappene over for å formatere.">${esc(a.body || '')}</textarea>
             <input type="file" id="imgFile" accept="image/*" multiple hidden>
             <input type="file" id="docFile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+            <div id="analysis" class="analysis" hidden></div>
             <p class="hint">Tom linje gir nytt avsnitt. For bilder: trykk «Bilde», eller lim inn / dra et bilde inn i tekstfeltet. Bildene gjøres automatisk mindre. Forhåndsvisningen viser hvordan det blir i håndboken.</p>
           </div>
         </form>
@@ -981,10 +983,51 @@
       ta.dispatchEvent(new Event('input'));
       toast('La inn ' + r.count + (r.count === 1 ? ' lenke' : ' lenker') + ' (merket gult i forhåndsvisningen). Trykk ✕ ved siden av en lenke for å gjøre den om til vanlig tekst igjen.', 10000);
     };
+    /* Sammenligning med eksisterende artikler: like setninger og forslag til «Se også» */
+    const runAnalysis = (quiet) => {
+      const box = $('#analysis');
+      if (!window.HBLink || !window.HBLink.analyze) return null;
+      if (!ta.value.trim()) { if (!quiet) toast('Skriv eller importer litt tekst først.'); return null; }
+      const f = collect();
+      const r = window.HBLink.analyze(f.body, f.title, draft.articles, a.id, f.related);
+      const title = (id) => { const x = draft.articles.find((y) => y.id === id); return x ? x.title : id; };
+      let h = '';
+      if (r.matches.length) {
+        h += '<h3>Setninger som ligner på eksisterende artikler</h3><p class="hint">Sjekk om dette bør stå i bare én artikkel, og lenk heller til den andre.</p><ul class="an-list">'
+          + r.matches.map((m) => `<li><q>${esc(m.sentence)}</q><div class="an-other">Ligner på «${esc(m.other)}» i <strong>${esc(m.title)}</strong> (${Math.round(Math.min(1, m.score) * 100)} %)</div></li>`).join('') + '</ul>';
+      }
+      if (r.suggestions.length) {
+        h += '<h3>Foreslåtte relaterte artikler</h3><ul class="an-list">'
+          + r.suggestions.map((s) => `<li class="an-sugg" data-id="${esc(s.id)}"><div><strong>${esc(s.title)}</strong><div class="an-other">${s.terms.length ? 'Felles ord: ' + esc(s.terms.join(', ')) : ''}${s.hits ? (s.terms.length ? ' · ' : '') + s.hits + ' lik' + (s.hits === 1 ? ' setning' : 'e setninger') : ''}</div></div><button type="button" class="btn small" data-addrel="${esc(s.id)}">+ Se også</button></li>`).join('') + '</ul>'
+          + (r.suggestions.length > 1 ? '<button type="button" class="btn small" data-addrel="*">Legg til alle i «Se også»</button>' : '');
+      }
+      if (!h) h = '<p class="hint">Fant ingen artikler som ligner. (Forslagene baseres på ord i tittel, søkeord og tekst.)</p>';
+      box.innerHTML = '<div class="an-head"><strong>Sammenligning med andre artikler</strong><button type="button" class="btn small" data-anclose>Lukk</button></div>' + h;
+      box.hidden = false;
+      return { sim: r.matches.length, sugg: r.suggestions.length };
+    };
+    $('#analysis').addEventListener('click', (e) => {
+      if (e.target.closest('[data-anclose]')) { $('#analysis').hidden = true; return; }
+      const b = e.target.closest('[data-addrel]');
+      if (!b) return;
+      const ids = b.dataset.addrel === '*' ? [...$('#analysis').querySelectorAll('.an-sugg')].map((x) => x.dataset.id) : [b.dataset.addrel];
+      let n = 0;
+      ids.forEach((id) => {
+        const cb = root.querySelector('input[name="rel"][value="' + id + '"]');
+        if (cb && !cb.checked) { cb.checked = true; n++; }
+        const li = $('#analysis').querySelector('.an-sugg[data-id="' + id + '"]');
+        if (li) li.remove();
+      });
+      const list = $('#relList');
+      if (list) list.dispatchEvent(new Event('change', { bubbles: true }));
+      if (b.dataset.addrel === '*') b.remove();
+      toast(n ? n + (n === 1 ? ' artikkel' : ' artikler') + ' lagt til i «Se også» (se lenger opp i skjemaet).' : 'Allerede lagt til.');
+    });
     root.querySelector('.tb').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-tb]');
       if (!b) return;
       if (b.dataset.tb === 'auto') autoLinks();
+      else if (b.dataset.tb === 'rel') runAnalysis(false);
       else TOOLS[b.dataset.tb](ta);
     });
 
@@ -1013,7 +1056,14 @@
         if (s.links) parts.push(s.links + (s.links === 1 ? ' nettlenke' : ' nettlenker'));
         let msg = 'Word-filen er hentet inn' + (parts.length ? ' (' + parts.join(', ') + ')' : '') + '. Se over teksten og rett opp det som trengs.';
         if (s.skippedImages) msg += ' ' + s.skippedImages + (s.skippedImages === 1 ? ' bilde' : ' bilder') + ' kunne ikke hentes (format som ikke støttes, eller bilde i tabell).';
-        toast(msg, 14000);
+        const found = runAnalysis(true);
+        if (found && (found.sim || found.sugg)) {
+          const bits = [];
+          if (found.sim) bits.push(found.sim + (found.sim === 1 ? ' setning som ligner' : ' setninger som ligner') + ' på eksisterende artikler');
+          if (found.sugg) bits.push(found.sugg + (found.sugg === 1 ? ' forslag' : ' forslag') + ' til relaterte artikler');
+          msg += ' Under teksten ser du ' + bits.join(' og ') + '.';
+        }
+        toast(msg, 16000);
       } catch (err) {
         toast(err instanceof window.HBWord.WordError ? err.message : 'Kunne ikke lese Word-filen. Er den lagret som .docx?', 10000);
       } finally {

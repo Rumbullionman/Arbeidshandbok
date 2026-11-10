@@ -95,3 +95,13 @@ body.editor main { max-width: 1200px; }
 }
 .unlink:hover, .unlink:focus-visible { background: var(--warn); border-color: var(--warn); color: #fff; }
 .article a.auto-link { background: rgba(255, 213, 79, .35); border-radius: 3px; }
+
+/* Sammenligning med andre artikler */
+.analysis { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 10px 14px; margin: 10px 0; }
+.analysis h3 { font-size: .95rem; margin: 12px 0 4px; }
+.an-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.an-list { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 8px; }
+.an-list li { border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.an-list li:not(.an-sugg) { display: block; border-left-color: var(--warn); }
+.an-list q { font-style: italic; }
+.an-other { color: var(--muted); font-size: .85rem; }

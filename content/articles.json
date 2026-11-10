@@ -1,32 +1,17 @@
 {
   "title": "Arbeidshåndbok",
-  "version": "2026-11-09.1",
-  "updated": "2026-11-09",
-  "categories": [
-    "Kom i gang",
-    "IT og verktøy",
-    "Personal og økonomi",
-    "HMS og sikkerhet",
-    "Praktisk",
-    "Målebok"
-  ],
+  "version": "2026-11-04.1",
+  "updated": "2026-11-04",
+  "categories": ["Kom i gang", "IT og verktøy", "Personal og økonomi", "HMS og sikkerhet", "Praktisk"],
   "articles": [
     {
       "id": "forste-uke",
       "title": "Din første uke",
       "category": "Kom i gang",
       "summary": "Hva du bør få gjort de første dagene, og hvem du kan spørre.",
-      "tags": [
-        "nyansatt",
-        "onboarding",
-        "oppstart",
-        "sjekkliste"
-      ],
+      "tags": ["nyansatt", "onboarding", "oppstart", "sjekkliste"],
       "updated": "2026-11-04",
-      "related": [
-        "logge-inn",
-        "melde-fravaer"
-      ],
+      "related": ["logge-inn", "melde-fravaer"],
       "body": "Velkommen! Her er en enkel plan for den første uka. Bytt ut eksemplene med dine egne rutiner.\n\n## Dag 1\n\n1. Møt leder og få en omvisning.\n2. Hent nøkkelkort og utstyr.\n3. Logg inn på PC og e-post, se [Logge inn og få tilgang](#/artikkel/logge-inn).\n4. Sett deg ned med fadderen din.\n\n## Resten av uka\n\n- Les gjennom HMS-rutinene, se [Varsle om avvik og skader](#/artikkel/varsle-avvik).\n- Registrer bankkonto og skattekort hos personal.\n- Bli kjent med teamet og de viktigste kundene eller prosjektene.\n\n> Ingen spørsmål er for små. Fadderen din er der for å hjelpe deg.\n\n## Viktige kontaktpersoner\n\n| Rolle | Navn | Telefon |\n|---|---|---|\n| Nærmeste leder | Fyll inn | 000 00 000 |\n| Fadder | Fyll inn | 000 00 000 |\n| IT-support | Fyll inn | 000 00 000 |\n| Personal | Fyll inn | 000 00 000 |"
     },
     {
@@ -34,19 +19,9 @@
       "title": "Logge inn og få tilgang",
       "category": "IT og verktøy",
       "summary": "Første innlogging, passord og tofaktor (MFA).",
-      "tags": [
-        "passord",
-        "pålogging",
-        "mfa",
-        "tofaktor",
-        "konto",
-        "it"
-      ],
+      "tags": ["passord", "pålogging", "mfa", "tofaktor", "konto", "it"],
       "updated": "2026-11-04",
-      "related": [
-        "it-support",
-        "vpn"
-      ],
+      "related": ["it-support", "vpn"],
       "body": "## Første innlogging\n\n1. Bruk brukernavnet og engangspassordet du fikk fra IT.\n2. Velg et nytt passord når du blir bedt om det.\n3. Sett opp tofaktor (MFA) med autentiseringsappen på mobilen.\n4. Logg ut og inn igjen for å sjekke at alt virker.\n\n## Krav til passord\n\n- Minst 12 tegn.\n- Ikke bruk samme passord som andre steder.\n- Bruk gjerne en passordbehandler.\n\n> ! Del aldri passordet ditt, heller ikke med IT. IT vil aldri spørre deg om det.\n\n## Glemt passord\n\nBruk «Glemt passord» på innloggingssiden. Hvis det ikke fungerer, kontakt [IT-support](#/artikkel/it-support)."
     },
     {
@@ -54,17 +29,9 @@
       "title": "Koble til VPN hjemmefra",
       "category": "IT og verktøy",
       "summary": "Slik får du tilgang til interne systemer utenfor kontoret.",
-      "tags": [
-        "vpn",
-        "hjemmekontor",
-        "fjernarbeid",
-        "nettverk"
-      ],
+      "tags": ["vpn", "hjemmekontor", "fjernarbeid", "nettverk"],
       "updated": "2026-11-04",
-      "related": [
-        "logge-inn",
-        "it-support"
-      ],
+      "related": ["logge-inn", "it-support"],
       "body": "Du trenger VPN for å nå interne systemer når du ikke er på kontorets nett.\n\n## Slik kobler du til\n\n1. Åpne VPN-klienten på PC-en.\n2. Velg profilen din og trykk **Koble til**.\n3. Godkjenn innloggingen med tofaktor på mobilen.\n4. Vent til status viser «Tilkoblet».\n\n## Feilsøking\n\n- Sjekk at du har internett uten VPN.\n- Start VPN-klienten på nytt.\n- Start PC-en på nytt.\n- Hjelper det ikke, kontakt [IT-support](#/artikkel/it-support) og oppgi eventuell feilmelding."
     },
     {
@@ -72,17 +39,9 @@
       "title": "Få hjelp av IT-support",
       "category": "IT og verktøy",
       "summary": "Hvordan du melder en sak og hva du bør ha klart.",
-      "tags": [
-        "it",
-        "support",
-        "feil",
-        "hjelp",
-        "hjelpetjeneste"
-      ],
+      "tags": ["it", "support", "feil", "hjelp", "hjelpetjeneste"],
       "updated": "2026-11-04",
-      "related": [
-        "logge-inn"
-      ],
+      "related": ["logge-inn"],
       "body": "## Slik melder du en sak\n\n1. Send e-post til it@eksempel.no eller ring 000 00 000.\n2. Beskriv hva du prøvde å gjøre og hva som skjedde.\n3. Legg ved skjermbilde av feilmeldingen.\n\n## Åpningstider\n\nHverdager 08:00–16:00. Ved kritiske feil utenfor åpningstid, se vaktlisten i intranettet.\n\n> Jo mer nøyaktig du beskriver feilen, desto raskere får du hjelp."
     },
     {
@@ -90,17 +49,9 @@
       "title": "Melde fravær og sykdom",
       "category": "Personal og økonomi",
       "summary": "Hvem du varsler, når, og hva som gjelder for egenmelding.",
-      "tags": [
-        "syk",
-        "sykemelding",
-        "egenmelding",
-        "fravær",
-        "barn syk"
-      ],
+      "tags": ["syk", "sykemelding", "egenmelding", "fravær", "barn syk"],
       "updated": "2026-11-04",
-      "related": [
-        "ferie"
-      ],
+      "related": ["ferie"],
       "body": "## Ved sykdom\n\n1. Varsle nærmeste leder så tidlig som mulig samme dag, helst før arbeidstidens start.\n2. Oppgi forventet varighet hvis du vet det.\n3. Registrer fraværet i personalsystemet.\n\n## Egenmelding\n\nReglene for egenmelding avhenger av avtalen din. Spør leder eller personal hva som gjelder for deg.\n\n## Syke barn\n\nMeld fra til leder og registrer fraværet som omsorgsdager.\n\n> Rutinene her er eksempler. Oppdater dem med virksomhetens egne regler."
     },
     {
@@ -108,16 +59,9 @@
       "title": "Søke om ferie og fri",
       "category": "Personal og økonomi",
       "summary": "Hvordan du søker, og hvor lang frist du bør ha.",
-      "tags": [
-        "ferie",
-        "fri",
-        "permisjon",
-        "søknad"
-      ],
+      "tags": ["ferie", "fri", "permisjon", "søknad"],
       "updated": "2026-11-04",
-      "related": [
-        "melde-fravaer"
-      ],
+      "related": ["melde-fravaer"],
       "body": "## Slik søker du\n\n1. Åpne ferieplanleggeren i personalsystemet.\n2. Velg datoer og send søknaden til leder.\n3. Vent på godkjenning før du bestiller reise.\n\n## Frister\n\n| Type | Søk senest |\n|---|---|\n| Sommerferie | 1. mars |\n| Øvrig ferie | 4 uker før |\n| Enkeltdager | 1 uke før |\n\n> Sjekk fristene mot virksomhetens egne regler. Tallene over er eksempler."
     },
     {
@@ -125,46 +69,40 @@
       "title": "Levere reiseregning og utlegg",
       "category": "Personal og økonomi",
       "summary": "Slik får du refundert utlegg raskt og riktig.",
-      "tags": [
-        "reise",
-        "utlegg",
-        "kvittering",
-        "refusjon",
-        "økonomi"
-      ],
+      "tags": ["reise", "utlegg", "kvittering", "refusjon", "økonomi"],
       "updated": "2026-11-04",
       "related": [],
       "body": "## Før du legger ut\n\nSpør leder om utgiften er godkjent. Bruk firmakort der du kan.\n\n## Slik leverer du\n\n1. Ta bilde av kvitteringen med mobilen.\n2. Åpne økonomisystemet og velg **Ny reiseregning**.\n3. Legg til kvitteringene, formål og prosjektnummer.\n4. Send til godkjenning.\n\n## Frist\n\nLever innen 30 dager etter utgiften.\n\n> Uten kvittering kan utlegget ikke refunderes."
+    },
+    {
+      "id": "varsle-avvik",
+      "title": "Varsle om avvik og skader",
+      "category": "HMS og sikkerhet",
+      "summary": "Hva du gjør hvis noe går galt, eller nesten gjør det.",
+      "tags": ["hms", "avvik", "skade", "ulykke", "nestenulykke", "varsling"],
+      "updated": "2026-11-04",
+      "related": ["brann-evakuering"],
+      "body": "> ! Ved akutt fare for liv og helse: ring 112 først.\n\n## Slik varsler du\n\n1. Sørg for egen og andres sikkerhet.\n2. Gi førstehjelp om du kan.\n3. Si fra til nærmeste leder.\n4. Registrer avviket i avvikssystemet samme dag.\n\n## Hva er et avvik?\n\n- Skader og nestenulykker.\n- Farlige forhold, som løse ledninger eller glatte gulv.\n- Brudd på rutiner.\n\nDet er trygt å varsle. Målet er å lære, ikke å peke ut skyldige."
+    },
+    {
+      "id": "brann-evakuering",
+      "title": "Brann og evakuering",
+      "category": "HMS og sikkerhet",
+      "summary": "Hva du gjør hvis brannalarmen går.",
+      "tags": ["brann", "evakuering", "alarm", "samlingsplass", "nødutgang"],
+      "updated": "2026-11-04",
+      "related": ["varsle-avvik"],
+      "body": "> ! Ved brann: varsle (112), redd, slukk hvis det er trygt, og forlat bygget.\n\n## Når alarmen går\n\n1. Stopp det du holder på med.\n2. Gå rolig til nærmeste nødutgang. Ikke bruk heis.\n3. Hjelp personer som trenger det.\n4. Møt opp på samlingsplassen.\n5. Vent på beskjed før noen går inn igjen.\n\n## Lær dette den første dagen\n\n- Hvor nødutgangene er.\n- Hvor samlingsplassen er.\n- Hvor slokkeutstyret står."
     },
     {
       "id": "kontor-praktisk",
       "title": "Praktisk info om kontoret",
       "category": "Praktisk",
       "summary": "Åpningstider, parkering, kantine og møterom.",
-      "tags": [
-        "kontor",
-        "parkering",
-        "kantine",
-        "møterom",
-        "åpningstid",
-        "nøkkelkort"
-      ],
+      "tags": ["kontor", "parkering", "kantine", "møterom", "åpningstid", "nøkkelkort"],
       "updated": "2026-11-04",
       "related": [],
       "body": "## Adgang\n\nNøkkelkortet gir tilgang 06:00–20:00. Utenom dette må du avtale med leder.\n\n## Møterom\n\nBook rom i kalenderen. Husk å avbestille hvis møtet utgår.\n\n## Parkering og sykkel\n\nFyll inn informasjon om parkering, sykkelparkering og kollektivtransport her.\n\n## Kantine og kaffe\n\nFyll inn åpningstider og priser."
-    },
-    {
-      "id": "stasjonsoppsett",
-      "title": "Stasjonsoppsett",
-      "category": "Målebok",
-      "summary": "Hvordan gjøre totalstasjonen klar til å stikke ut/måle inn.",
-      "tags": [
-        "Fri oppstilling",
-        "Stasjonsopsett"
-      ],
-      "related": [],
-      "body": "Blud wtf skjer dette er crazy.\n\n![Geoplan3d Ansvrett](bilder/geoplan3d-ansvrett-c3st.jpg)",
-      "updated": "2026-11-09"
     }
   ]
 }
