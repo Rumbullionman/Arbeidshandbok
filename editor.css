@@ -105,3 +105,24 @@ body.editor main { max-width: 1200px; }
 .an-list li:not(.an-sugg) { display: block; border-left-color: var(--warn); }
 .an-list q { font-style: italic; }
 .an-other { color: var(--muted); font-size: .85rem; }
+.title-warn { display: block; margin-top: 4px; color: var(--warn); font-size: .85rem; font-weight: 400; }
+.ed-form input[aria-invalid="true"] { border-color: var(--warn); }
+
+/* Dialog for klikkbare områder */
+.map-dlg { width: min(760px, 96vw); max-height: 94vh; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg, #fff); color: var(--text); padding: 16px 18px; }
+.map-dlg::backdrop { background: rgba(0,0,0,.5); }
+.map-dlg h2 { margin-top: 0; }
+.map-dlg label { display: block; font-weight: 600; margin: 8px 0; }
+.map-dlg select { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); max-width: 100%; }
+.map-canvas { position: relative; touch-action: none; user-select: none; cursor: crosshair; line-height: 0; margin: 10px 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.map-canvas img { display: block; width: 100%; height: auto; pointer-events: none; }
+.map-rect { position: absolute; box-sizing: border-box; border: 2px solid var(--accent); background: rgba(31,95,139,.25); color: #fff; font: 700 14px/1 system-ui, sans-serif; display: flex; align-items: center; justify-content: center; pointer-events: none; text-shadow: 0 0 3px #000; }
+.map-rect.empty { border-color: var(--warn); background: rgba(200,100,0,.25); }
+.map-rect.band { border-style: dashed; }
+.map-areas { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.map-areas li { display: flex; gap: 8px; align-items: center; }
+.map-areas select { flex: 1; min-width: 0; }
+.map-n { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; align-items: center; justify-content: center; font-size: .8rem; flex: none; }
+.map-msg { color: var(--warn); font-weight: 600; }
+.map-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.map-btns .grow { flex: 1; }

@@ -185,7 +185,7 @@
           <button class="btn" id="favBtn" aria-pressed="${favSet.has(a.id)}">${favSet.has(a.id) ? '★ Favoritt' : '☆ Lagre som favoritt'}</button>
           <button class="btn" id="printBtn">Skriv ut</button>
         </div>
-        ${markdown(a.body)}
+        ${markdown(a.body, { titleOf: (rid) => { const x = data.articles.find((y) => y.id === rid); return x ? x.title : null; } })}
       </article>
       ${related.length ? `<h2 class="section-title">Se også</h2><div class="cards">${related.map((r) => card(r, favSet)).join('')}</div>` : ''}`;
     markSeen(a);

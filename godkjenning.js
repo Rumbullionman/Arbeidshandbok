@@ -148,6 +148,8 @@
     if (!c) return renderInboxCfg();
     const { out } = computeOutgoing();
     if (!out.length) { toast('Ingenting nytt å sende.'); return; }
+    const dups = E.dupTitles();
+    if (dups.length) { toast('Flere artikler har samme tittel: ' + dups.map((t) => '«' + t + '»').join(', ') + '. Gi dem ulike titler før du sender inn.', 10000); return; }
     let name = localStorage.getItem(NAME_KEY) || '';
     if (!name) {
       name = (prompt('Hva heter du? Navnet vises til den som godkjenner.') || '').trim().slice(0, 80);
@@ -450,10 +452,12 @@
         if (!imgs.has(n) && !published.has(n) && !E.pending.has(n)) warn.push('Artikkelen bruker bildet «' + n + '» som ikke fulgte med.');
       });
     }
-    const canApprove = !(s.type !== 'ny' && !cur);
+    const clash = s.article ? E.titleTaken(s.article.title, s.type === 'ny' ? null : s.articleId) : null;
+    if (clash) warn.push('Det finnes allerede en artikkel med tittelen «' + s.article.title + '». Forslaget kan ikke godkjennes før tittelen er endret. Avvis det og be om en ny tittel.');
+    const canApprove = !(s.type !== 'ny' && !cur) && !clash;
 
     const imageSrc = (p) => { const r = imgs.get(E.imgName(p)); return r ? r.url : E.imageSrc(p); };
-    const view = (a) => `<h1>${esc(a.title)}</h1>` + (E.markdown(a.body, { imageSrc }) || '<p class="hint">Ingen innhold.</p>');
+    const view = (a) => `<h1>${esc(a.title)}</h1>` + (E.markdown(a.body, { imageSrc, titleOf: E.titleOf }) || '<p class="hint">Ingen innhold.</p>');
 
     const fieldRows = () => {
       const old = cur || {}, nw = s.article;
@@ -504,6 +508,7 @@
   async function approve(it, s, imgs, cur) {
     const draft = E.draft;
     if (s.type !== 'ny' && !cur) { toast('Artikkelen finnes ikke lenger.'); return; }
+    if (s.article && E.titleTaken(s.article.title, s.type === 'ny' ? null : s.articleId)) { toast('Det finnes allerede en artikkel med denne tittelen. Forslaget kan ikke godkjennes.', 8000); return; }
     if (s.type !== 'ny' && s.baseSig && E.contentSig(cur) !== s.baseSig
       && !confirm('Artikkelen er endret etter at forslaget ble laget. Godkjenner du, overskrives disse endringene. Fortsette?')) return;
     if (s.type === 'sletting' && !confirm('Slette «' + cur.title + '» fra håndboken?')) return;

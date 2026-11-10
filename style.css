@@ -137,3 +137,10 @@ h3 { font-size: 1rem; margin: 18px 0 6px; }
 .article figure { margin: 16px 0; }
 .article img { display: block; max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border); background: var(--accent-soft); }
 .article figcaption { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+
+/* Klikkbare områder i bilder */
+.imgmap { position: relative; display: block; line-height: 0; }
+.imgmap img { display: block; }
+.imgmap a.hot { position: absolute; display: block; border-radius: 6px; border: 2px solid transparent; transition: background .15s, border-color .15s; }
+.imgmap a.hot:hover, .imgmap a.hot:focus-visible { background: rgba(31, 95, 139, .18); border-color: var(--accent); outline: none; }
+.hot-list { font-size: .9rem; margin: 8px 0 0; }

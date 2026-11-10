@@ -81,6 +81,10 @@ Begrensninger: bare `.docx` (lagre eldre `.doc` på nytt i Word), lister blir fl
 
 Når du henter inn en Word-fil sjekkes teksten automatisk mot de andre artiklene. Under tekstfeltet vises setninger som ligner på noe som allerede står i en annen artikkel (så du kan unngå å skrive det samme to steder), og forslag til relaterte artikler. Det samme kan du gjøre når som helst for tekst du har skrevet selv med **«🔍 Finn relaterte»**. «+ Se også» legger artikkelen til i «Se også»-listen. Sammenligningen er en enkel ordsammenligning, så vurder alltid forslagene selv.
 
+### Klikkbare bilder (f.eks. en meny)
+
+Legg først inn bildet. Trykk så **«🗺 Bilde med lenker»**, dra et rektangel over hver del av bildet som skal være klikkbar (med mus eller finger), og velg artikkelen den skal føre til. Trykk «Bruk». I håndboken kan leseren trykke på området, og under bildet vises også en vanlig liste med de samme lenkene. Under panseret legges dette på bildelinjen, f.eks. `![Meny](bilder/meny.jpg){lenker: vpn@5,10,30,40; ferie@40,10,30,40}` (venstre, topp, bredde, høyde i prosent), så du kan også rette det for hånd. Slettes en artikkel som et område peker til, skjules området i håndboken.
+
 ### «Se også»
 
 Under hver artikkel kan du velge relaterte artikler. Med mange artikler bruker du søkefeltet over listen: du kan søke på tittel, kategori og søkeord. «Bare valgte» viser det du allerede har krysset av. Valg du har gjort, beholdes selv om de er skjult av søket.
@@ -167,7 +171,7 @@ python3 -m http.server 8080
 
 ## Når du endrer selve appen
 
-Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `editor.js`, `godkjenning.js`, `wordimport.js`, `autolenker.js`, `md.js` eller ikoner, må du øke `VERSION` i `sw.js` (fra `v7` til `v8`, og så videre). Da henter alle enheter ny app neste gang de er på nett. Rene innholdsendringer krever ikke dette.
+Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `editor.js`, `godkjenning.js`, `imagemap.js`, `wordimport.js`, `autolenker.js`, `md.js` eller ikoner, må du øke `VERSION` i `sw.js` (fra `v9` til `v10`, og så videre). Da henter alle enheter ny app neste gang de er på nett. Rene innholdsendringer krever ikke dette.
 
 ## Filer
 
@@ -176,6 +180,7 @@ Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `edi
 | `index.html`, `style.css`, `app.js`, `md.js` | Selve håndboken |
 | `editor.html`, `editor.js`, `editor.css` | Redigeringsverktøyet |
 | `godkjenning.js` | Roller, innsending og godkjenning |
+| `imagemap.js` | Tegne klikkbare områder på bilder |
 | `wordimport.js` | Leser Word-filer (.docx) i nettleseren |
 | `autolenker.js` | Finner og lager lenker til andre artikler |
 | `sw.js` | Offline og hurtigbuffer |

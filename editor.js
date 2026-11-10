@@ -27,6 +27,20 @@
       .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'artikkel';
   }
+  // Titler regnes som like selv om store/små bokstaver og mellomrom er ulike.
+  const normTitle = (t) => String(t || '').normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+  function titleTaken(title, exceptId) {
+    const n = normTitle(title);
+    return n ? draft.articles.find((a) => a.id !== exceptId && normTitle(a.title) === n) || null : null;
+  }
+  function dupTitles() {
+    const seen = new Map(), dup = new Set();
+    draft.articles.forEach((a) => {
+      const n = normTitle(a.title);
+      if (seen.has(n)) dup.add(seen.get(n)); else seen.set(n, a.title);
+    });
+    return [...dup];
+  }
   function uniqueId(seed) {
     const ids = new Set(draft.articles.map((a) => a.id));
     let id = seed, n = 2;
@@ -126,6 +140,7 @@
   const MAX_DIM = 1600;
   const imgName = (p) => p.replace(/^bilder\//, '');
   const imageSrc = (p) => { const r = pending.get(imgName(p)); return r ? r.url : null; };
+  const titleOf = (id) => { const x = draft && draft.articles.find((y) => y.id === id); return x ? x.title : null; };
   function refsOf(d) {
     const s = new Set();
     d.articles.forEach((a) => imageNames(a.body).forEach((n) => s.add(imgName(n))));
@@ -467,6 +482,8 @@
     const c = gh.cfg();
     if (!c) return renderGh();
     if (!changes().total) { toast('Ingen endringer å publisere.'); return; }
+    const dups = dupTitles();
+    if (dups.length) { toast('Flere artikler har samme tittel: ' + dups.map((t) => '«' + t + '»').join(', ') + '. Gi dem ulike titler før du publiserer.', 10000); return; }
     const d = finalize();
     const w = warnings(d);
     if (w.length && !confirm('Advarsler:\n\n' + w.slice(0, 6).join('\n') + '\n\nPublisere likevel?')) return;
@@ -862,7 +879,7 @@
       <h1>${isNew ? 'Ny artikkel' : 'Rediger artikkel'}</h1>
       <div class="ed-grid">
         <form id="f" class="ed-form" autocomplete="off">
-          <label>Tittel <input type="text" id="f-title" value="${esc(a.title)}" placeholder="F.eks. Slik bestiller du kontorrekvisita"></label>
+          <label>Tittel <input type="text" id="f-title" value="${esc(a.title)}" placeholder="F.eks. Slik bestiller du kontorrekvisita"><span class="title-warn" id="titleWarn" role="alert" hidden></span></label>
           <label>Kategori <select id="f-cat">${catOpts}</select></label>
           <label>Kort sammendrag <small>(vises i oversikten)</small><input type="text" id="f-sum" value="${esc(a.summary || '')}" placeholder="Én setning om hva artikkelen handler om"></label>
           <label>Søkeord <small>(skilt med komma, gjerne synonymer folk kan finne på å søke etter)</small><input type="text" id="f-tags" value="${esc((a.tags || []).join(', '))}" placeholder="bestilling, rekvisita, innkjøp"></label>
@@ -890,6 +907,7 @@
               <button type="button" data-tb="img" title="Legg inn bilde">🖼 Bilde</button>
               <button type="button" data-tb="ext" title="Lenke til nettside">🔗 Nettlenke</button>
               <button type="button" data-tb="doc" title="Hent tekst og bilder fra en Word-fil (.docx)">📄 Fra Word</button>
+              <button type="button" data-tb="map" title="Gjør deler av et bilde klikkbare, så leseren sendes til en annen artikkel">🗺 Bilde med lenker</button>
               <button type="button" data-tb="rel" title="Se over teksten og foreslå relaterte artikler og tekst som finnes fra før">🔍 Finn relaterte</button>
               <button type="button" data-tb="auto" title="Finn omtaler av andre artikler og gjør dem om til lenker">✨ Lag lenker</button>
               <select id="linkSel" aria-label="Lenke til annen artikkel">
@@ -923,9 +941,9 @@
     const preview = () => {
       const f = collect();
       const pv = $('#preview');
-      pv.innerHTML = `<h1>${esc(f.title || 'Uten tittel')}</h1>` + (markdown(f.body, { imageSrc }) || '<p class="hint">Innholdet vises her.</p>');
+      pv.innerHTML = `<h1>${esc(f.title || 'Uten tittel')}</h1>` + (markdown(f.body, { imageSrc, titleOf }) || '<p class="hint">Innholdet vises her.</p>');
       // liten ✕-knapp ved hver lenke til en annen artikkel: gjør lenken om til vanlig tekst
-      pv.querySelectorAll('a[href^="#/artikkel/"]').forEach((l) => {
+      pv.querySelectorAll('a[href^="#/artikkel/"]:not(.hot)').forEach((l) => {
         if (fresh.has(l.getAttribute('href').slice(11))) l.classList.add('auto-link');
         const x = document.createElement('button');
         x.type = 'button';
@@ -963,6 +981,16 @@
 
     ta.addEventListener('input', preview);
     $('#f-title').addEventListener('input', preview);
+    const checkTitle = () => {
+      const other = titleTaken($('#f-title').value, a.id);
+      const w = $('#titleWarn');
+      w.hidden = !other;
+      w.textContent = other ? 'Det finnes allerede en artikkel med denne tittelen (i kategorien «' + other.category + '»). Velg en annen tittel.' : '';
+      $('#f-title').setAttribute('aria-invalid', other ? 'true' : 'false');
+      return other;
+    };
+    $('#f-title').addEventListener('input', checkTitle);
+    checkTitle();
     $('#f-cat').addEventListener('change', (e) => {
       if (e.target.value !== '__new') return;
       const name = (prompt('Navn på ny kategori:') || '').trim();
@@ -983,6 +1011,34 @@
       ta.dispatchEvent(new Event('input'));
       toast('La inn ' + r.count + (r.count === 1 ? ' lenke' : ' lenker') + ' (merket gult i forhåndsvisningen). Trykk ✕ ved siden av en lenke for å gjøre den om til vanlig tekst igjen.', 10000);
     };
+    /* Klikkbare områder i bilder */
+    const IMG_LINE = /^!\[([^\]]*)\]\((bilder\/[A-Za-z0-9][A-Za-z0-9._-]*)\)(?:\{lenker:([^}]*)\})?\s*$/;
+    const openMap = () => {
+      if (!window.HBMap) { toast('Funksjonen er ikke lastet. Last siden på nytt.'); return; }
+      const lines = ta.value.split('\n');
+      const items = [];
+      lines.forEach((ln, i) => {
+        const m = ln.match(IMG_LINE);
+        if (m) items.push({ line: i, path: m[2], alt: m[1], src: imageSrc(m[2]) || 'content/' + m[2], areas: window.HBMD.parseAreas(m[3] || '') });
+      });
+      if (!items.length) { toast('Legg først inn et bilde i teksten (knappen «Bilde»).', 6000); return; }
+      const curLine = ta.value.slice(0, ta.selectionStart).split('\n').length - 1;
+      let idx = items.findIndex((x) => x.line === curLine);
+      if (idx < 0) idx = 0;
+      const targets = draft.articles.filter((x) => x.id !== a.id).sort((x, y) => x.title.localeCompare(y.title, 'nb'));
+      if (!targets.length) { toast('Det finnes ingen andre artikler å lenke til ennå.'); return; }
+      window.HBMap.open({
+        items, index: idx, articles: targets,
+        onSave: (i, areas) => {
+          const it = items[i];
+          lines[it.line] = '![' + it.alt + '](' + it.path + ')' + window.HBMD.formatAreas(areas);
+          ta.value = lines.join('\n');
+          ta.dispatchEvent(new Event('input'));
+          toast(areas.length ? areas.length + (areas.length === 1 ? ' område' : ' områder') + ' i bildet er koblet til artikler. Prøv dem i forhåndsvisningen.' : 'Områdene er fjernet fra bildet.', 7000);
+        }
+      });
+    };
+
     /* Sammenligning med eksisterende artikler: like setninger og forslag til «Se også» */
     const runAnalysis = (quiet) => {
       const box = $('#analysis');
@@ -1028,6 +1084,7 @@
       if (!b) return;
       if (b.dataset.tb === 'auto') autoLinks();
       else if (b.dataset.tb === 'rel') runAnalysis(false);
+      else if (b.dataset.tb === 'map') openMap();
       else TOOLS[b.dataset.tb](ta);
     });
 
@@ -1042,7 +1099,7 @@
         const r = await window.HBWord.convert(file, { addImage });
         if (!r.body && !r.title) { toast('Fant verken tekst eller bilder i Word-filen.', 8000); return; }
         const titleEl = $('#f-title');
-        if (r.title && !titleEl.value.trim()) titleEl.value = r.title;
+        if (r.title && !titleEl.value.trim()) { titleEl.value = r.title; titleEl.dispatchEvent(new Event('input')); }
         if (r.body) {
           if (ta.value.trim()) insertBlock(ta, '\n' + r.body + '\n');
           else { ta.value = r.body + '\n'; }
@@ -1148,6 +1205,7 @@
     const save = () => {
       const f = collect();
       if (!f.title) { toast('Skriv inn en tittel først.'); $('#f-title').focus(); return; }
+      if (checkTitle()) { toast('Det finnes allerede en artikkel med tittelen «' + f.title + '». Velg en annen tittel.', 7000); $('#f-title').focus(); return; }
       if (!f.category || f.category === '__new') { toast('Velg en kategori.'); return; }
       if (isNew) {
         draft.articles.push({ id: uniqueId(slug(f.title)), ...f, updated: today() });
@@ -1274,7 +1332,7 @@
     hooks, root, esc, markdown, imageNames, $, clone, today, slug, uniqueId, toast, contentSig, json,
     store, persist, changes, gh, inbox, role, GhError, ghFetch, ghMessage, ghRepoUrl, ghFilePath, ghPutBlob,
     b64enc, b64dec, detectRepo, pending, imgName, imageSrc, addPendingBlob,
-    renderList, renderGh, start,
+    renderList, renderGh, start, titleTaken, dupTitles, titleOf,
     get draft() { return draft; },
     get base() { return base; }
   };
