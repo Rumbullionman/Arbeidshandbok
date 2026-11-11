@@ -10,14 +10,18 @@
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="style.css">
+  <script src="theme.js"></script>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="#/" aria-label="Til forsiden">
-      <span class="logo" aria-hidden="true">📘</span>
-      <span>Arbeidshåndbok</span>
+      <span class="logo" id="brandLogo" aria-hidden="true">📘</span>
+      <span id="brandName">Arbeidshåndbok</span>
     </a>
-    <div class="status" id="status" role="status" aria-live="polite"></div>
+    <div class="topright">
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+      <button type="button" class="iconbtn" id="themeBtn" aria-label="Utseende: lyst/mørkt og tema" title="Utseende">🎨</button>
+    </div>
   </header>
 
   <main id="app" tabindex="-1"></main>

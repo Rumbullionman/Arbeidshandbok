@@ -78,7 +78,8 @@
       const y = mb.get(id);
       if (!y || contentSig(x) !== contentSig(y)) return false;
     }
-    return JSON.stringify(a.categories || []) === JSON.stringify(b.categories || []);
+    return JSON.stringify(a.categories || []) === JSON.stringify(b.categories || [])
+      && JSON.stringify(a.tema || null) === JSON.stringify(b.tema || null);
   }
   function merge(orig, mine, theirs) {
     const o = mapOf(orig), m = mapOf(mine);
@@ -95,6 +96,9 @@
       const cats = [...(mine.categories || [])];
       (theirs.categories || []).forEach((c) => { if (!cats.includes(c)) cats.push(c); });
       out.categories = cats;
+    }
+    if (JSON.stringify(orig.tema || null) !== JSON.stringify(mine.tema || null)) {
+      if (mine.tema) out.tema = clone(mine.tema); else delete out.tema;
     }
     return out;
   }
@@ -128,7 +132,8 @@
     });
     const removed = base.articles.filter((a) => !draft.articles.some((x) => x.id === a.id)).length;
     const cats = JSON.stringify(base.categories || []) !== JSON.stringify(draft.categories || []);
-    return { added, edited, removed, cats, total: added + edited + removed + (cats ? 1 : 0) };
+    const theme = JSON.stringify(base.tema || null) !== JSON.stringify(draft.tema || null);
+    return { added, edited, removed, cats, theme, total: added + edited + removed + (cats ? 1 : 0) + (theme ? 1 : 0) };
   }
   function statusOf(a) {
     const b = base.articles.find((x) => x.id === a.id);
@@ -144,6 +149,7 @@
   function refsOf(d) {
     const s = new Set();
     d.articles.forEach((a) => imageNames(a.body).forEach((n) => s.add(imgName(n))));
+    if (d.tema && d.tema.logo) s.add(imgName(d.tema.logo));
     return s;
   }
   const referencedPending = (d) => { const refs = refsOf(d); return [...pending.values()].filter((r) => refs.has(r.name)); };
@@ -666,6 +672,7 @@
     if (c.edited) parts.push(c.edited + (c.edited === 1 ? ' endret' : ' endrede'));
     if (c.removed) parts.push(c.removed + (c.removed === 1 ? ' slettet' : ' slettede'));
     if (c.cats) parts.push('endringer i kategorier');
+    if (c.theme) parts.push('endringer i utseende');
 
     const f = filter.toLowerCase();
     const order = draft.categories || [];
@@ -699,6 +706,7 @@
         <button class="btn" id="newdoc" title="Lag en ny artikkel av en Word-fil">📄 Ny fra Word</button>
         ${isEditor ? '' : '<button class="btn" id="cats">Kategorier</button>'}
         ${hooks.barHtml ? hooks.barHtml() : ''}
+        ${hooks.bar2 ? hooks.bar2() : ''}
         <span class="grow"></span>
         <button class="btn" id="ghset">⚙ Tilkobling</button>
         ${isEditor ? '' : '<button class="btn" id="imp">Importer fil</button><input type="file" id="file" accept="application/json,.json" hidden>'}
@@ -755,6 +763,7 @@
     };
     root.querySelector('.rows') && root.querySelector('.rows').addEventListener('click', onRowClick);
     if (hooks.afterList) hooks.afterList();
+    if (hooks.after2) hooks.after2();
   }
 
   function onRowClick(e) {

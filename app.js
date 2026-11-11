@@ -233,6 +233,7 @@
     if (!navigator.onLine || !('caches' in window)) return;
     const names = new Set();
     d.articles.forEach((a) => imageNames(a.body).forEach((n) => names.add(n)));
+    if (d.tema && /^bilder\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(d.tema.logo || '')) names.add(d.tema.logo);
     if (!names.size) return;
     let cache;
     try { cache = await caches.open('handbok-content'); } catch (e) { return; }
@@ -244,6 +245,10 @@
         if (res.ok) await cache.put(url, res);
       } catch (e) { /* prøves igjen neste gang */ }
     }
+  }
+
+  function applyTheme() {
+    if (window.HBTheme) window.HBTheme.apply(data && data.tema);
   }
 
   async function checkForUpdates(manual) {
@@ -263,6 +268,7 @@
 
       data = fresh;
       store.set(KEYS.data, fresh);
+      applyTheme();
       initSeen(fresh.articles);
       renderMeta();
       precacheImages(fresh);
@@ -292,6 +298,7 @@
     const stored = store.get(KEYS.data, null);
     if (valid(stored)) {
       data = stored;
+      applyTheme();
       initSeen(data.articles);
       renderMeta();
       route();
@@ -302,6 +309,7 @@
     try {
       data = await fetchData();
       store.set(KEYS.data, data);
+      applyTheme();
       initSeen(data.articles);
       renderMeta();
       route();
@@ -322,6 +330,7 @@
   });
   setInterval(() => { if (document.visibilityState === 'visible') checkForUpdates(false); }, CHECK_EVERY_MS);
   $('#refreshBtn').addEventListener('click', () => checkForUpdates(true));
+  $('#themeBtn').addEventListener('click', () => { if (window.HBTheme) window.HBTheme.openPicker(); });
 
   // installer som app
   let deferredPrompt = null;

@@ -126,3 +126,31 @@ body.editor main { max-width: 1200px; }
 .map-msg { color: var(--warn); font-weight: 600; }
 .map-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
 .map-btns .grow { flex: 1; }
+
+/* Utseende */
+.th-form fieldset { margin-bottom: 16px; }
+.th-row { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+.th-row label { flex: 1 1 200px; }
+.ed-form label.inl { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+.th-logo { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+.th-logo-img { max-height: 48px; max-width: 200px; background: repeating-conic-gradient(#ccc 0 25%, #fff 0 50%) 0 0 / 14px 14px; border: 1px solid var(--border); border-radius: 6px; }
+.th-modes { display: grid; gap: 16px; }
+@media (min-width: 900px) { .th-modes { grid-template-columns: 1fr 1fr; align-items: start; } }
+.ed-form label.th-color { display: flex; gap: 10px; align-items: center; font-weight: 400; margin: 8px 0; }
+.th-color input[type="color"] { width: 44px; height: 36px; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: none; cursor: pointer; flex: none; }
+.th-color span { display: grid; }
+.th-color small { color: var(--muted); }
+.th-ck { list-style: none; margin: 8px 0; padding: 0; font-size: .82rem; }
+.th-ck .ok { color: var(--good); }
+.th-ck .low { color: var(--warn); font-weight: 600; }
+.th-pv { margin-top: 8px; }
+.tm { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; font-size: 14px; }
+.tm-top { background: var(--accent); color: var(--accent-text); padding: 10px 12px; display: flex; gap: 8px; align-items: center; }
+.tm-top img { height: 24px; width: auto; max-width: 100px; object-fit: contain; }
+.tm-body { padding: 12px; }
+.tm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.tm-card p { margin: 6px 0 10px; }
+.tm-card a { color: var(--accent); }
+.tm-muted { color: var(--muted); }
+.tm-chip { background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+.tm-btn { background: var(--accent); color: var(--accent-text); border-radius: calc(var(--radius) * .8); padding: 4px 12px; display: inline-block; }

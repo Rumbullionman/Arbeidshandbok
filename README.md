@@ -89,6 +89,21 @@ Legg først inn bildet. Trykk så **«🗺 Bilde med lenker»**, dra et rektange
 
 Under hver artikkel kan du velge relaterte artikler. Med mange artikler bruker du søkefeltet over listen: du kan søke på tittel, kategori og søkeord. «Bare valgte» viser det du allerede har krysset av. Valg du har gjort, beholdes selv om de er skjult av søket.
 
+## Utseende: farger, logo og temaer
+
+Som hovedadmin trykker du **«🎨 Utseende»** på oversikten i editoren. Der kan du:
+
+- skrive inn navnet som vises i toppfeltet og velge en **logo** (gjøres automatisk liten; PNG med gjennomsiktig bakgrunn fungerer best),
+- velge fire farger (hovedfarge, bakgrunn, kort og tekst) hver for **lyst** og **mørkt** modus. De andre fargene beregnes automatisk, og du får varsel hvis kontrasten er så lav at teksten blir vanskelig å lese,
+- velge skrift og hvor rundede hjørner skal være,
+- lage **flere temaer** (kopi av det du har), gi dem navn og velge hvilket som er standard.
+
+Du ser lyst og mørkt forhåndsvisning side om side. Utseendet lagres i utkastet og publiseres sammen med artiklene (i `content/articles.json`, og logoen i `content/bilder/`).
+
+**Leserne** får en liten 🎨-knapp i toppfeltet. Der kan de bare velge *tema* og *lyst/mørkt/automatisk*, ikke endre farger. Valget lagres på deres egen enhet. Redaktører ser ikke Utseende-siden, og selve editoren bruker alltid standardfargene.
+
+Ikonet og navnet på den installerte appen (hjemmeskjermen) styres av `manifest.webmanifest` og `icons/`, ikke av denne siden.
+
 ## Godkjenning: alle kan skrive, hovedadmin godkjenner
 
 Slik er det satt opp:
@@ -171,7 +186,7 @@ python3 -m http.server 8080
 
 ## Når du endrer selve appen
 
-Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `editor.js`, `godkjenning.js`, `imagemap.js`, `wordimport.js`, `autolenker.js`, `md.js` eller ikoner, må du øke `VERSION` i `sw.js` (fra `v9` til `v10`, og så videre). Da henter alle enheter ny app neste gang de er på nett. Rene innholdsendringer krever ikke dette.
+Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `editor.js`, `godkjenning.js`, `theme.js`, `utseende.js`, `imagemap.js`, `wordimport.js`, `autolenker.js`, `md.js` eller ikoner, må du øke `VERSION` i `sw.js` (fra `v10` til `v11`, og så videre). Da henter alle enheter ny app neste gang de er på nett. Rene innholdsendringer krever ikke dette.
 
 ## Filer
 
@@ -180,6 +195,8 @@ Endrer du `index.html`, `editor.html`, `style.css`, `editor.css`, `app.js`, `edi
 | `index.html`, `style.css`, `app.js`, `md.js` | Selve håndboken |
 | `editor.html`, `editor.js`, `editor.css` | Redigeringsverktøyet |
 | `godkjenning.js` | Roller, innsending og godkjenning |
+| `theme.js` | Farger, logo og temavelger i håndboken |
+| `utseende.js` | Utseende-siden i editoren |
 | `imagemap.js` | Tegne klikkbare områder på bilder |
 | `wordimport.js` | Leser Word-filer (.docx) i nettleseren |
 | `autolenker.js` | Finner og lager lenker til andre artikler |

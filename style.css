@@ -144,3 +144,17 @@ h3 { font-size: 1rem; margin: 18px 0 6px; }
 .imgmap a.hot { position: absolute; display: block; border-radius: 6px; border: 2px solid transparent; transition: background .15s, border-color .15s; }
 .imgmap a.hot:hover, .imgmap a.hot:focus-visible { background: rgba(31, 95, 139, .18); border-color: var(--accent); outline: none; }
 .hot-list { font-size: .9rem; margin: 8px 0 0; }
+
+/* Logo og temavelger */
+.topright { display: flex; align-items: center; gap: 8px; }
+.iconbtn { background: rgba(255,255,255,.18); border: 0; border-radius: 999px; width: 36px; height: 36px; color: inherit; font-size: 1.05rem; line-height: 1; }
+.iconbtn:hover { background: rgba(255,255,255,.3); }
+.logo-img { display: block; height: 28px; width: auto; max-width: 120px; object-fit: contain; }
+.tema-dlg { width: min(420px, 94vw); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 16px 18px; }
+.tema-dlg::backdrop { background: rgba(0,0,0,.5); }
+.tema-dlg h2 { margin-top: 0; }
+.tema-dlg fieldset { border: 1px solid var(--border); border-radius: 10px; margin: 0 0 12px; padding: 6px 12px 10px; }
+.tema-dlg label { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.tema-dlg .sw { display: inline-flex; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+.tema-dlg .sw i { display: block; width: 16px; height: 18px; }
+.tema-btns { display: flex; justify-content: flex-end; }
